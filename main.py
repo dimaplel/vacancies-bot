@@ -1,4 +1,3 @@
-import json
 import logging
 import asyncio
 import sys
@@ -7,10 +6,10 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 
-dp = Dispatcher()
+import src.config as cfg
+from src.config import ConfigField as CfgField
 
-with open('config.json') as f:
-    TOKEN = json.load(f)['token']
+dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
@@ -22,9 +21,8 @@ async def handler(message: Message) -> None:
 
 
 async def main() -> None:
-    # Initialize Bot instance with a default parse mode which will be passed to all API calls
-    bot = Bot(TOKEN)
-    # And the run events dispatching
+    config = cfg.Config("config.json")
+    bot = Bot(config.get_field(CfgField.BOT_TOKEN))
     await dp.start_polling(bot)
 
 

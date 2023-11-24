@@ -1,3 +1,8 @@
 {
-  "token": ""
+  "bot": {
+    "token": ""
+  }, 
+  "sql": {
+    "main_token": ""
+  }
 }
