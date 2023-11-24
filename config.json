@@ -3,6 +3,8 @@
     "token": ""
   }, 
   "sql": {
-    "main_token": ""
+    "db_name": "",
+    "db_user": "",
+    "db_pswd": ""
   }
 }

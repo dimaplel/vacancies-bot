@@ -6,8 +6,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 
-import src.config as cfg
-from src.config import ConfigField as CfgField
+from src.config import Config
+from src.config import ConfigField
+
+import src.psql_database as sql
+from src.psql_database import PsqlDatabase
 
 dp = Dispatcher()
 
@@ -20,12 +23,33 @@ async def handler(message: Message) -> None:
     await message.reply(f"Sup!")
 
 
+cfg = Config("config.json")
+db: PsqlDatabase = None
+
+
+@dp.startup()
+async def on_startup() -> None:
+    logging.info("Starting up the bot")
+    
+    db_name = cfg.get_field(ConfigField.SQL_NAME)
+    db_user = cfg.get_field(ConfigField.SQL_USER)
+    db_pswd = cfg.get_field(ConfigField.SQL_PSWD)
+    db = PsqlDatabase(db_name)
+    db.open(db_user, db_pswd)
+    
+
+@dp.shutdown()
+async def on_shutdown() -> None:
+    logging.info("Shutting down the bot")
+    db.close()
+
+
 async def main() -> None:
-    config = cfg.Config("config.json")
-    bot = Bot(config.get_field(CfgField.BOT_TOKEN))
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    
+    bot = Bot(token=cfg.get_field(ConfigField.BOT_TOKEN))
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
