@@ -1,0 +1,21 @@
+version: '3.0'
+services:
+  db:
+    image: postgres:14.6-alpine
+    restart: unless-stopped
+    environment:
+      PGDATA: /pgdata
+    volumes:
+      - ./db:/var/lib/postgresql/data:rw
+    env_file:
+      - ./.env
+
+  bot:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
