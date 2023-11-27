@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import os
 import sys
 
 from aiogram import Bot, Dispatcher
@@ -21,18 +22,19 @@ async def handler(message: Message) -> None:
     await message.reply(f"Sup!")
 
 
-cfg = Config("config.json")
+cfg = Config(os.path.abspath(os.getcwd()) + r"/config.json")
 db: PsqlDatabase = None
 
 
 @dp.startup()
 async def on_startup() -> None:
     logging.info("Starting up the bot")
-    
+
+    db_host = cfg.get_field(ConfigField.SQL_HOST)
     db_name = cfg.get_field(ConfigField.SQL_NAME)
     db_user = cfg.get_field(ConfigField.SQL_USER)
     db_pswd = cfg.get_field(ConfigField.SQL_PSWD)
-    db = PsqlDatabase(db_name)
+    db = PsqlDatabase(db_name, db_host)
     db.open(db_user, db_pswd)
     
 

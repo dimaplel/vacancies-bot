@@ -1,9 +1,11 @@
 import json
+import logging
 
 from enum import StrEnum
 
 class ConfigField(StrEnum):
     BOT_TOKEN = "bot.token",
+    SQL_HOST = "sql.db_host",
     SQL_NAME = "sql.db_name",
     SQL_USER = "sql.db_user",
     SQL_PSWD = "sql.db_pswd"
@@ -21,4 +23,5 @@ class Config:
                 value = value[key]
             else:
                 return ""
+        logging.info(f"Field {field} was set to: {value}")
         return value

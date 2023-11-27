@@ -4,18 +4,28 @@ services:
     image: postgres:14.6-alpine
     restart: unless-stopped
     environment:
+      POSTGRES_DB: coursework_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       PGDATA: /pgdata
     volumes:
       - ./db:/var/lib/postgresql/data:rw
-    env_file:
-      - ./.env
+
+  redis:
+    image: redis:7.2-alpine
+    environment:
+      - REDIS_HOST=redis
+    volumes:
+      - redis_data:/data
 
   bot:
     build: .
     restart: always
     depends_on:
       - db
-    env_file:
-      - ./.env
+      - redis
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+volumes:
+  redis_data:

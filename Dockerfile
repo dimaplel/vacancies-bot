@@ -1,4 +1,4 @@
-FROM python:3.10-alpine
+FROM python:3.11-alpine
 WORKDIR /usr/app/
 COPY requirements.txt ./requirements.txt
 RUN apk add --no-cache postgresql-libs && \
