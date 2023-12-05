@@ -10,6 +10,8 @@ from config import Config
 from psql_connection import PsqlConnection
 from sweet_home import SweetHome
 
+from config import Config
+from databases.psql_connection import PsqlConnection
 
 dp = Dispatcher()
 cfg = Config() # type: ignore
