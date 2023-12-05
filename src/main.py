@@ -7,8 +7,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from src.config import Config
-from src.databases.psql_connection import PsqlConnection
+from config import Config
+from databases.psql_connection import PsqlConnection
 
 dp = Dispatcher()
 

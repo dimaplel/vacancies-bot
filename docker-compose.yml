@@ -1,31 +1,42 @@
 version: '3.0'
 services:
-  db:
+  postgres:
     image: postgres:14.6-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: coursework_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      PGDATA: /pgdata
     volumes:
-      - ./db:/var/lib/postgresql/data:rw
+      - ./postgres:/var/lib/postgresql/data:rw
+    ports:
+      - 5432:5432
+    env_file:
+      - ./.env
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - 27017:27017
+    env_file:
+      - ./.env
+    volumes:
+      - mongodata:/data
 
   redis:
     image: redis:7.2-alpine
-    environment:
-      - REDIS_HOST=redis
     volumes:
       - redis_data:/data
+
+    env_file:
+      - ./.env
 
   bot:
     build: .
     restart: always
     depends_on:
-      - db
+      - postgres
       - redis
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 volumes:
+  mongodata:
+    driver: local
   redis_data:
