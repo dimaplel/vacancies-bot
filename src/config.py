@@ -1,6 +1,9 @@
 import json
 import logging
 
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings
+
 from enum import StrEnum
 
 class ConfigField(StrEnum):
@@ -8,20 +11,26 @@ class ConfigField(StrEnum):
     SQL_HOST = "sql.db_host",
     SQL_NAME = "sql.db_name",
     SQL_USER = "sql.db_user",
-    SQL_PSWD = "sql.db_pswd"
+    SQL_PSWD = "sql.db_pswd",
+    REDIS_HOST = "redis.db_host",
+    REDIS_USER = "redis.db_user",
+    REDIS_PASSWORD = "redis.db_pswd",
+    COUCHDB_URL = "couchdb.db_url",
+    COUCHDB_NAME = "couchdb.db_name"
 
-class Config:
-    def __init__(self, filepath: str) -> None:
-        with open(filepath) as f:
-            self.file = json.load(f)
-    
-    def get_field(self, field: ConfigField):
-        keys = field.value.split('.')  # Split the field string into nested keys
-        value = self.file
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                return ""
-        logging.info(f"Field {field} was set to: {value}")
-        return value
+
+class Config(BaseSettings):
+    token: SecretStr
+    postgres_host: str
+    postgres_user: str
+    postgres_password: SecretStr
+    postgres_db: str
+    mongodb_initdb_root_username: str
+    mongodb_initdb_root_password: str
+
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+

@@ -9,7 +9,7 @@ from aiogram.types import Message
 
 from src.config import Config
 from src.config import ConfigField
-from src.psql_database import PsqlDatabase
+from src.databases.psql_connection import PsqlConnection
 
 dp = Dispatcher()
 
@@ -22,21 +22,20 @@ async def handler(message: Message) -> None:
     await message.reply(f"Sup!")
 
 
-cfg = Config(os.path.abspath(os.getcwd()) + r"/config.json")
-db: PsqlDatabase = None
+cfg = Config()
+db: PsqlConnection = None
 
 
 @dp.startup()
 async def on_startup() -> None:
     logging.info("Starting up the bot")
 
-    db_host = cfg.get_field(ConfigField.SQL_HOST)
-    db_name = cfg.get_field(ConfigField.SQL_NAME)
-    db_user = cfg.get_field(ConfigField.SQL_USER)
-    db_pswd = cfg.get_field(ConfigField.SQL_PSWD)
-    db = PsqlDatabase(db_name, db_host)
-    db.open(db_user, db_pswd)
-    
+    db_host = cfg.postgres_host
+    db_name = cfg.postgres_db
+    db_user = cfg.postgres_user
+    db_pswd = cfg.postgres_password.get_secret_value()
+    db = PsqlConnection(db_host=db_host, db_name=db_name, db_user=db_user, db_pswd=db_pswd)
+    db.open()
 
 @dp.shutdown()
 async def on_shutdown() -> None:
