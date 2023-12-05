@@ -8,7 +8,6 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from src.config import Config
-from src.config import ConfigField
 from src.databases.psql_connection import PsqlConnection
 
 dp = Dispatcher()
@@ -46,7 +45,7 @@ async def on_shutdown() -> None:
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     
-    bot = Bot(token=cfg.get_field(ConfigField.BOT_TOKEN))
+    bot = Bot(token=cfg.token.get_secret_value())
     await dp.start_polling(bot)
 
 
