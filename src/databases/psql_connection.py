@@ -9,6 +9,8 @@ class PsqlConnection:
         self.host = db_host
         self.user = db_user
         self.password = db_pswd
+        self.conn = None
+        self.cur = None
         
 
     def open(self):

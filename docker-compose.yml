@@ -1,6 +1,6 @@
 version: '3.0'
 services:
-  postgres:
+  pgsql:
     image: postgres:14.6-alpine
     restart: unless-stopped
     volumes:
@@ -12,6 +12,7 @@ services:
 
   mongodb:
     image: mongo:7.0
+    restart: unless-stopped
     ports:
       - 27017:27017
     env_file:
@@ -21,17 +22,33 @@ services:
 
   redis:
     image: redis:7.2-alpine
+    restart: unless-stopped
     volumes:
       - redis_data:/data
-
+    environment:
+      USERNAME: ${REDIS_USERNAME}
+      PASSWORD: ${REDIS_PASSWORD}
     env_file:
       - ./.env
+
+  neo4j:
+    image: neo4j:5.14
+    restart: unless-stopped
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - neo4j_data:/data/
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-admin}
+
 
   bot:
     build: .
     restart: always
     depends_on:
-      - postgres
+      - pgsql
+      - mongodb
       - redis
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -40,3 +57,4 @@ volumes:
   mongodata:
     driver: local
   redis_data:
+  neo4j_data:
