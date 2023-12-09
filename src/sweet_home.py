@@ -1,6 +1,5 @@
 import logging
 
-from typing import Optional
 from aiogram.types import Message
 from aiogram.utils.formatting import Italic, Bold
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
@@ -46,6 +45,7 @@ class SweetHome:
             cfg.neo4j_user,
             cfg.neo4j_password.get_secret_value()
         )
+        self._user_cache = {}
 
         try:
             logging.info("Opening databases connections")
@@ -58,41 +58,37 @@ class SweetHome:
             return
 
 
-    def request_user_profile(self, user_id: int) -> Optional[UserProfile]:
+    def request_user_profile(self, user_id: int) -> (UserProfile | None):
+        # Avoid querying sql connection everytime using cached values
+        # cached values must ensure they are always up-to-date with sql connection and vice versa
+        userProfile: (UserProfile | None) = self._user_cache.get(user_id)
+        if userProfile is not None:
+            return userProfile
+
         queryResult = self._sql_connection.execute_query(f"SELECT * FROM user_profiles WHERE user_id = {user_id}")
         if queryResult is None:
             return None
 
         first_name = queryResult['first_name']
         last_name = queryResult['last_name']
-        seeker_profile = self.request_seeker_profile(user_id)
-        recruiter_profile = self.request_recruiter_profile(user_id)
-        userProfile = UserProfile(user_id, first_name, last_name, seeker_profile, recruiter_profile)
+        # We do not specify seeker_profile and recruiter_profile here. Those will be set explicitly
+        userProfile = UserProfile(user_id, first_name, last_name) 
+        
+        if not userProfile.request_seeker_profile(self._sql_connection):
+            logging.info("Could not set a seeker profile for user with id %d", user_id)
+            logging.info("Registration of the seeker profile will be required")
+
+
+        if not userProfile.request_recruiter_profile(self._sql_connection):
+            logging.info("Could not set a recruiter profile for user with id %d", user_id)
+            logging.info("Registration of the recruiter profile will be required")
+
+
+        # Cache user profile value in map
+        self._user_cache[user_id] = userProfile
         return userProfile
 
 
-    def request_seeker_profile(self, user_id: int) -> Optional[SeekerProfile]:
-        queryResult = self._sql_connection.execute_query(f"SELECT * FROM seeker_profiles WHERE user_id = {user_id}")
-        if queryResult is None:
-            return None
-
-        portfolio_ref = queryResult['portfolio_ref']
-        seeker_node_ref = queryResult['seeker_node_ref']
-        seeker_profile = SeekerProfile(user_id, portfolio_ref, seeker_node_ref)
-        return seeker_profile
-
-
-    def request_recruiter_profile(self, user_id: int) -> Optional[RecruiterProfile]:
-        queryResult = self._sql_connection.execute_query(f"SELECT * FROM recruiter_profiles WHERE user_id = {user_id}")
-        if queryResult is None:
-            return None
-
-        company_id: int = int(queryResult['company_id'])
-        recruiter_node_ref = queryResult['recruiter_node_ref']
-        recruiter_profile = RecruiterProfile(user_id, recruiter_node_ref, company_id)
-        return recruiter_profile
-        
-        
     def _sql_db_init(self):
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS user_profiles (
@@ -136,8 +132,8 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
         return
         # kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
         # await message.answer("Welcome back! Choose from one of the options below.", reply_markup=kb)
-    await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
-                         f"For registration purposes, enter your {Italic("first name")}.")
+    # await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
+    #                    f"For registration purposes, enter your {Italic("first name")}.")
     await state.set_state(ProfileStates.first_name)
 
 
@@ -145,8 +141,8 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
 @entry_router.message(ProfileStates.first_name)
 async def enter_first_name(message: Message, state: FSMContext) -> None:
     await state.update_data(first_name=message.text)
-    await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
-                         f"Now, please provide me with your {Italic("last name")}.")
+    # await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
+    #                    f"Now, please provide me with your {Italic("last name")}.")
     await state.set_state(ProfileStates.last_name)
 
 
