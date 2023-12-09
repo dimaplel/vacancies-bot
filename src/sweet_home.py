@@ -2,12 +2,18 @@ import logging
 
 from typing import Optional
 from aiogram.types import Message
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram import Router
 
-from config import Config
+from states.profile_states import ProfileStates
+from config import cfg
 from databases.psql_connection import PsqlConnection
 from databases.redis_connection import RedisConnection
 from databases.mongodb_connection import MongoDBConnection
 from databases.neo4j_connection import Neo4jConnection
+from keyboards.creation_menu_keyboard import CreationMenuKeyboard
 
 from users.user_profile import UserProfile
 from users.seeker_profile import SeekerProfile
@@ -15,7 +21,7 @@ from users.recruiter_profile import RecruiterProfile
 
 
 class SweetHome:
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self) -> None:
         self._cfg = cfg
         self._sql_connection = PsqlConnection(
             cfg.postgres_host,
@@ -96,22 +102,34 @@ class SweetHome:
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS seeker_profiles (
                 user_id BIGINT PRIMARY KEY, 
-                portfolio_ref TEXT, 
+                portfolio_ref VARCHAR(255) NOT NULL, 
                 seeker_node_ref BIGINT NOT NULL)""")
             
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS recruiter_profiles (
                 user_id BIGINT PRIMARY KEY, 
                 recruiter_node_ref BIGINT, 
-                company_id SERIAL)""")
+                company_id INT,
+                FOREIGN KEY (company_id) REFERENCES companies(company_id))""")
 
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS vacancies (
                 recruiter_id BIGINT, 
-                vacancy_doc_ref TEXT)""")
+                vacancy_doc_ref VARCHAR(255))""")
 
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS companies (
                 company_id SERIAL PRIMARY KEY, 
-                name VARCHAR(100), 
+                name VARCHAR(255), 
                 website VARCHAR(255))""")
+
+
+entry_router = Router()
+menu = SweetHome()
+@entry_router.message(CommandStart())
+async def entry_handler(message: Message, state: FSMContext):
+    if menu.request_user_profile(message.from_user.id) is not None:
+        kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
+        await message.answer("Welcome back! Choose from one of the options below.", reply_markup=CreationMenuKeyboard())
+    await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
+                         "")
