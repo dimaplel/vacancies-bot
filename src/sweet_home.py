@@ -15,8 +15,6 @@ from databases.neo4j_connection import Neo4jConnection
 from keyboards.function_choice_keyboard import function_choice_keyboard
 
 from users.user_profile import UserProfile
-from users.seeker_profile import SeekerProfile
-from users.recruiter_profile import RecruiterProfile
 
 
 class SweetHome:
@@ -92,6 +90,7 @@ class SweetHome:
 
 
     def add_user_profile(self, userProfile: UserProfile):
+        assert self.request_user_profile(userProfile.get_id()) is None
         user_id = userProfile.get_id()
         self._user_cache[user_id] = userProfile
         self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
