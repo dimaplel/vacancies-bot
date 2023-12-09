@@ -63,7 +63,7 @@ class SweetHome:
     def sql_db_init(self):
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS user_profiles (
-                user_id BIGINT PRIMARY KEY, "
+                user_id BIGINT PRIMARY KEY, 
                 first_name VARCHAR(255), 
                 last_name VARCHAR(255))""")
 
@@ -75,7 +75,7 @@ class SweetHome:
             
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS recruiter_profiles (
-                user_id BIGINT PRIMARY KEY, "
+                user_id BIGINT PRIMARY KEY, 
                 recruiter_node_ref BIGINT, 
                 company_id SERIAL)""")
 
