@@ -47,5 +47,5 @@ class PsqlConnection:
             except Exception as e:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
-            logging.info("PsqlDatabase failed to execute query on {}", self.name)
+            logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
             return None

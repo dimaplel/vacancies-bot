@@ -38,7 +38,7 @@ class MongoDBConnection:
             print(f"Inserted document with ID: {result.inserted_id}")
             return str(result.inserted_id)
         except Exception as e:
-            print(f"Error inserting document into MongoDB: {e}")
+            logging.error(f"Error inserting document into MongoDB: {e}")
             return None
 
 
@@ -50,5 +50,5 @@ class MongoDBConnection:
                 print(f"Retrieved document with ID {doc_id} from MongoDB: {document}")
             return document
         except Exception as e:
-            print(f"Error getting document from MongoDB: {e}")
+            logging.error(f"Error getting document from MongoDB: {e}")
             return None

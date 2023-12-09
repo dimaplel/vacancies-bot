@@ -25,3 +25,4 @@ class Config(BaseSettings):
         case_sensitive = False
 
 
+cfg = Config()

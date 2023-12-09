@@ -30,6 +30,9 @@ class Neo4jConnection:
 
 
     def run_query(self, query, parameters=None):
-        with self._driver.session() as session:
-            result = session.run(query, parameters)
-            return result
+        try:
+            with self._driver.session() as session:
+                result = session.run(query, parameters)
+                return result
+        except Exception as e:
+            logging.error(f"Error while executing query %s in %s: %s" % (query, self.__class__.__name__, e))
