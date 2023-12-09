@@ -1,8 +1,10 @@
 class RecruiterProfile:
+    _user_id: int
     _recruiter_node_ref: str
-    _company_sql_ref: str
+    _company_id: int # Can be used to retrieve company object from companies table in sql connection
 
-    def __init__(self, recruiter_node_ref: str, company_ref: str):
+    def __init__(self, user_id: int, recruiter_node_ref: str, company_ref: str):
+        self._user_id = user_id
         self._recruiter_node_ref = recruiter_node_ref
         self._company_sql_ref = company_ref
 

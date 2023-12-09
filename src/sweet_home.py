@@ -10,6 +10,8 @@ from databases.mongodb_connection import MongoDBConnection
 from databases.neo4j_connection import Neo4jConnection
 
 from users.user_profile import UserProfile
+from users.seeker_profile import SeekerProfile
+from users.recruiter_profile import RecruiterProfile
 
 
 class SweetHome:
@@ -44,23 +46,47 @@ class SweetHome:
             self._mongodb_connection.open()
             self._redis_connection.open()
             self._neo4j_connection.open()
-            self.sql_db_init()
+            self._sql_db_init()
         except Exception as e:
             return
 
 
-    def request_user_profile(self, user_id) -> Optional[UserProfile]:
+    def request_user_profile(self, user_id: int) -> Optional[UserProfile]:
         queryResult = self._sql_connection.execute_query(f"SELECT * FROM user_profiles WHERE user_id = {user_id}")
         if queryResult is None:
             return None
 
         first_name = queryResult['first_name']
         last_name = queryResult['last_name']
-        userProfile = UserProfile(user_id, first_name, last_name)
+        seeker_profile = self.request_seeker_profile(user_id)
+        recruiter_profile = self.request_recruiter_profile(user_id)
+        userProfile = UserProfile(user_id, first_name, last_name, seeker_profile, recruiter_profile)
         return userProfile
 
+
+    def request_seeker_profile(self, user_id: int) -> Optional[SeekerProfile]:
+        queryResult = self._sql_connection.execute_query(f"SELECT * FROM seeker_profiles WHERE user_id = {user_id}")
+        if queryResult is None:
+            return None
+
+        portfolio_ref = queryResult['portfolio_ref']
+        seeker_node_ref = queryResult['seeker_node_ref']
+        seeker_profile = SeekerProfile(user_id, portfolio_ref, seeker_node_ref)
+        return seeker_profile
+
+
+    def request_recruiter_profile(self, user_id: int) -> Optional[RecruiterProfile]:
+        queryResult = self._sql_connection.execute_query(f"SELECT * FROM recruiter_profiles WHERE user_id = {user_id}")
+        if queryResult is None:
+            return None
+
+        company_id: int = int(queryResult['company_id'])
+        recruiter_node_ref = queryResult['recruiter_node_ref']
+        recruiter_profile = RecruiterProfile(user_id, recruiter_node_ref, company_id)
+        return recruiter_profile
         
-    def sql_db_init(self):
+        
+    def _sql_db_init(self):
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS user_profiles (
                 user_id BIGINT PRIMARY KEY, 
