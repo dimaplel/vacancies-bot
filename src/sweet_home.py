@@ -2,6 +2,7 @@ import logging
 
 from typing import Optional
 from aiogram.types import Message
+from aiogram.utils.formatting import Italic, Bold
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -126,10 +127,34 @@ class SweetHome:
 
 entry_router = Router()
 menu = SweetHome()
+
+
 @entry_router.message(CommandStart())
-async def entry_handler(message: Message, state: FSMContext):
+async def entry_handler(message: Message, state: FSMContext) -> None:
     if menu.request_user_profile(message.from_user.id) is not None:
-        kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
-        await message.answer("Welcome back! Choose from one of the options below.", reply_markup=CreationMenuKeyboard())
+        # TODO: implement menu for existing user
+        return
+        # kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
+        # await message.answer("Welcome back! Choose from one of the options below.", reply_markup=kb)
     await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
-                         "")
+                         f"For registration purposes, enter your {Italic("first name")}.")
+    await state.set_state(ProfileStates.first_name)
+
+
+
+@entry_router.message(ProfileStates.first_name)
+async def enter_first_name(message: Message, state: FSMContext) -> None:
+    await state.update_data(first_name=message.text)
+    await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
+                         f"Now, please provide me with your {Italic("last name")}.")
+    await state.set_state(ProfileStates.last_name)
+
+
+@entry_router.message(ProfileStates.last_name)
+async def enter_last_name(message: Message, state: FSMContext) -> None:
+    await state.update_data(last_name=message.text)
+    data = await state.get_data()
+    up = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
+    # TODO: add up to the hash map and to the sql db
+    await message.answer("Your profile has been successfully registered! Choose from one of the options below.")
+    # TODO: make buttons for searching and publishing
