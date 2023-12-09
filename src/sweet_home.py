@@ -1,8 +1,7 @@
 import logging
 
 from aiogram.types import Message
-from aiogram.utils.formatting import Italic, Bold
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.utils.formatting import Italic, Text, Bold
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram import Router
@@ -13,7 +12,7 @@ from databases.psql_connection import PsqlConnection
 from databases.redis_connection import RedisConnection
 from databases.mongodb_connection import MongoDBConnection
 from databases.neo4j_connection import Neo4jConnection
-from keyboards.creation_menu_keyboard import CreationMenuKeyboard
+from keyboards.function_choice_keyboard import function_choice_keyboard
 
 from users.user_profile import UserProfile
 from users.seeker_profile import SeekerProfile
@@ -92,6 +91,14 @@ class SweetHome:
         return userProfile
 
 
+    def add_user_profile(self, userProfile: UserProfile):
+        user_id = userProfile.get_id()
+        self._user_cache[user_id] = userProfile
+        self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
+                                           f"VALUES (%s, %s, %s)",
+                                           user_id, userProfile.first_name, userProfile.last_name)
+
+
     def _sql_db_init(self):
         self._sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS user_profiles (
@@ -137,9 +144,8 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
         # kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
         # await message.answer("Welcome back! Choose from one of the options below.", reply_markup=kb)
     
-    await message.reply("Welcome to the Vacancies Bot!")
-    # await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
-    #                    f"For registration purposes, enter your {Italic("first name")}.")
+    await message.answer(f"Welcome to the Vacancies Bot 👨‍💻\n\n"
+                         f"For registration purposes, enter your {Italic('first name').as_html()}.", parse_mode="HTML")
     await state.set_state(ProfileStates.first_name)
 
 
@@ -147,9 +153,8 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
 @entry_router.message(ProfileStates.first_name)
 async def enter_first_name(message: Message, state: FSMContext) -> None:
     await state.update_data(first_name=message.text)
-    await message.reply(f"Nice to meet you, {message.text}!")
-    # await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
-    #                    f"Now, please provide me with your {Italic("last name")}.")
+    await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
+                       f"Now, please provide me with your {Italic('last name').as_html()}.", parse_mode="HTML")
     await state.set_state(ProfileStates.last_name)
 
 
@@ -157,7 +162,8 @@ async def enter_first_name(message: Message, state: FSMContext) -> None:
 async def enter_last_name(message: Message, state: FSMContext) -> None:
     await state.update_data(last_name=message.text)
     data = await state.get_data()
-    up = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
-    # TODO: add up to the hash map and to the sql db
-    await message.answer("Your profile has been successfully registered! Choose from one of the options below.")
+    userProfile = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
+    menu.add_user_profile(userProfile=userProfile)
+    await message.answer("Your profile has been successfully registered! Choose from one of the options below.",
+                         reply_markup=function_choice_keyboard())
     # TODO: make buttons for searching and publishing

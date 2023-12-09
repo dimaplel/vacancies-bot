@@ -16,7 +16,7 @@ class UserProfile:
         sql_connection.execute_query(f"""
             UPDATE user_profiles 
             SET first_name = \"{self.first_name}\", last_name = \"{self.last_name}\" 
-            WHERE user_id = {self.user_id}""")
+            WHERE user_id = {self.get_id()}""")
 
 
     def get_id(self) -> int:
