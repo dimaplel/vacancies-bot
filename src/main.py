@@ -12,9 +12,6 @@ from config import cfg
 
 dp = Dispatcher()
 dp.include_router(entry_router)
-# @dp.message(Command("start"))
-# async def command_start_handler(message: Message) -> None:
-#     await home.on_user_entry(message)
 
 
 async def main() -> None:

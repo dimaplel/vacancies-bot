@@ -69,8 +69,11 @@ class SweetHome:
         if queryResult is None:
             return None
 
-        first_name = queryResult['first_name']
-        last_name = queryResult['last_name']
+        # We should always assume there is only 1 result for any user_id we provided
+        assert len(queryResult) == 1
+        row = queryResult[0]
+        first_name = row['first_name']
+        last_name = row['last_name']
         # We do not specify seeker_profile and recruiter_profile here. Those will be set explicitly
         userProfile = UserProfile(user_id, first_name, last_name) 
         
@@ -127,11 +130,14 @@ menu = SweetHome()
 
 @entry_router.message(CommandStart())
 async def entry_handler(message: Message, state: FSMContext) -> None:
-    if menu.request_user_profile(message.from_user.id) is not None:
+    user_id = message.from_user.id
+    if menu.request_user_profile(user_id) is not None:
         # TODO: implement menu for existing user
         return
         # kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
         # await message.answer("Welcome back! Choose from one of the options below.", reply_markup=kb)
+    
+    await message.reply("Welcome to the Vacancies Bot!")
     # await message.answer("Welcome to the Vacancies Bot 👨‍💻\n\n"
     #                    f"For registration purposes, enter your {Italic("first name")}.")
     await state.set_state(ProfileStates.first_name)
@@ -141,6 +147,7 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
 @entry_router.message(ProfileStates.first_name)
 async def enter_first_name(message: Message, state: FSMContext) -> None:
     await state.update_data(first_name=message.text)
+    await message.reply(f"Nice to meet you, {message.text}!")
     # await message.answer(f"Nice to meet you, {message.text}! You have a lovely first name!\n\n"
     #                    f"Now, please provide me with your {Italic("last name")}.")
     await state.set_state(ProfileStates.last_name)

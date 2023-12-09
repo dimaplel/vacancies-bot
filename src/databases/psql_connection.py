@@ -43,7 +43,7 @@ class PsqlConnection:
                     return None
 
                 result = self.cur.fetchall()
-                return None if result.count() == 0 else result
+                return None if len(result) == 0 else result
             except Exception as e:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
