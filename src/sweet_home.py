@@ -7,7 +7,6 @@ from databases.redis_connection import RedisConnection
 from databases.mongodb_connection import MongoDBConnection
 from databases.neo4j_connection import Neo4jConnection
 
-
 from hashlib import sha3_256
 
 class SweetHome:
@@ -42,8 +41,9 @@ class SweetHome:
             self._mongodb_connection.open()
             self._redis_connection.open()
             self._neo4j_connection.open()
+            self.sql_db_init()
         except Exception as e:
-            pass
+            return
 
                 
     async def on_user_entry(self, message: Message) -> None:
@@ -60,3 +60,15 @@ class SweetHome:
         num_bytes = str(telegram_id).encode("utf-8")
         sha3_hash = sha3_256(num_bytes)
         return sha3_hash.hexdigest()
+
+
+    def sql_db_init(self):
+        self._sql_connection.execute_query(f"CREATE TABLE IF NOT EXISTS user_profiles (user_id BIGINT PRIMARY KEY, "
+                           f"first_name VARCHAR(255), last_name VARCHAR(255))")
+        self._sql_connection.execute_query(f"CREATE TABLE IF NOT EXISTS seeker_profiles (user_id BIGINT PRIMARY KEY, portfolio_ref TEXT, "
+                           f"seeker_node_ref BIGINT NOT NULL)")
+        self._sql_connection.execute_query(f"CREATE TABLE IF NOT EXISTS recruiter_profiles (user_id BIGINT PRIMARY KEY, "
+                           f"recruiter_node_ref BIGINT, company_id SERIAL)")
+        self._sql_connection.execute_query(f"CREATE TABLE IF NOT EXISTS vacancies (recruiter_id BIGINT, vacancy_doc_ref TEXT)")
+        self._sql_connection.execute_query(f"CREATE TABLE IF NOT EXISTS companies (company_id SERIAL PRIMARY KEY, "
+                           f"name VARCHAR(100), website VARCHAR(255))")
