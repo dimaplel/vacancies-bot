@@ -1,9 +1,11 @@
 import logging
 from dataclasses import dataclass
+
+from aiogram.types import ReplyKeyboardMarkup
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
 from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection
-
+from src.keyboards.profile_keyboards import UserProfileKeyboardMarkup
 
 @dataclass
 class UserProfile:
@@ -12,6 +14,7 @@ class UserProfile:
     last_name: str
     seeker_ref: SeekerProfile = None
     recruiter_ref: RecruiterProfile = None
+    user_markup = UserProfileKeyboardMarkup()
 
 
     def update(self, sql_connection: PsqlConnection):
@@ -97,6 +100,7 @@ class UserProfile:
         # This is unexpected behavior if we try to set a seeker profile while there is already one
         assert not self.has_seeker_profile()
         assert seeker_profile.get_id() == self.get_id() # They should have same id
+        self.user_markup.set_button_value("seeker_button", "Seeker Menu 🔍")
         self.seeker_ref = seeker_profile
 
 
@@ -104,6 +108,7 @@ class UserProfile:
         # This is unexpected behavior if we try to set a recruiter profile while there is already one
         assert not self.has_recruiter_profile()
         assert recruiter_profile.get_id() == self.get_id() # They should have same id
+        self.user_markup.set_button_value("recruiter_button", "Recruiter Menu 📝")
         self.recruiter_ref = recruiter_profile
 
 

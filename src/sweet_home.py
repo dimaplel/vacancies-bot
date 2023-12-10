@@ -12,7 +12,7 @@ from states.entry_registration_states import EntryRegistrationStates
 from config import cfg
 from src.connections import PsqlConnection
 from src.connections import Neo4jConnection, RedisConnection, MongoDBConnection
-from keyboards.function_choice_keyboard import function_choice_keyboard
+from keyboards.profile_keyboards import UserProfileKeyboardMarkup
 
 from users.user_profile import UserProfile
 
@@ -78,11 +78,9 @@ class SweetHome:
             logging.info("Could not set a seeker profile for user with id %d", user_id)
             logging.info("Registration of the seeker profile will be required")
 
-
         if not user_profile.request_recruiter_profile(self._sql_connection):
             logging.info("Could not set a recruiter profile for user with id %d", user_id)
             logging.info("Registration of the recruiter profile will be required")
-
 
         # Cache user profile value in map
         self._user_cache[user_id] = user_profile
@@ -146,7 +144,6 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
     await message.answer(f"Welcome to the Vacancies Bot 👨‍💻\n\n"
                          f"For registration purposes, enter your {Italic('first name').as_html()}.", parse_mode="HTML")
     await state.set_state(EntryRegistrationStates.first_name)
-
 
 
 @entry_router.message(EntryRegistrationStates.first_name)
