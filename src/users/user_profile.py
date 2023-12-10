@@ -1,7 +1,9 @@
+import logging
 from dataclasses import dataclass
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
-from src.databases.psql_connection import PsqlConnection
+from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection
+
 
 @dataclass
 class UserProfile:
@@ -22,7 +24,23 @@ class UserProfile:
     def get_id(self) -> int:
         return self._user_id
 
-     
+
+    def add_seeker_profile(self, portfolio: dict, mongodb_connection: MongoDBConnection, neo4j_connection: Neo4jConnection,
+                           psql_connection: PsqlConnection):
+        user_id = self.get_id()
+        portfolio_ref = mongodb_connection.insert_document("portfolios", portfolio)
+        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: %d}) RETURN id(s) AS seeker_id",
+                                                  {"user_id": user_id})
+        if result.sinle() is None:
+            logging.error("Error while adding portfolio into Neo4J")
+            return
+
+        seeker_node_ref = result.single()["seeker_id"]
+        psql_connection.execute_query(f"INSERT INTO seeker_profiles VALUES "
+                                      f"({user_id}, {portfolio_ref}, {seeker_node_ref})")
+        self._set_seeker_profile(SeekerProfile(user_id, portfolio_ref, seeker_node_ref))
+
+
     # Returns False if the seeker profile was not set for a provided user
     # Calling this method when user's seeker profile was already set results in runtime error
     # A profile won't be set, thus returning False, if:

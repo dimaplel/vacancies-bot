@@ -7,11 +7,12 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from sweet_home import entry_router
+from profile_home import profile_router
 from config import cfg
 
 
 dp = Dispatcher()
-dp.include_router(entry_router)
+dp.include_routers(entry_router, profile_router)
 
 
 async def main() -> None:
