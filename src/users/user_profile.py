@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 
-from aiogram.types import ReplyKeyboardMarkup
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
 from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection
@@ -17,11 +16,15 @@ class UserProfile:
     user_markup = UserProfileKeyboardMarkup()
 
 
+    def get_full_name(self):
+        return self.first_name + " " + self.last_name
+
+
     def update(self, sql_connection: PsqlConnection):
         sql_connection.execute_query(f"""
             UPDATE user_profiles 
-            SET first_name = \"{self.first_name}\", last_name = \"{self.last_name}\" 
-            WHERE user_id = {self.get_id()}""")
+            SET first_name = %s, last_name = %s 
+            WHERE user_id = {self.get_id()}""", self.first_name, self.last_name)
 
 
     def get_id(self) -> int:
@@ -32,9 +35,9 @@ class UserProfile:
                            psql_connection: PsqlConnection):
         user_id = self.get_id()
         portfolio_ref = mongodb_connection.insert_document("portfolios", portfolio)
-        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: %d}) RETURN id(s) AS seeker_id",
+        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: %d}) RETURN ID(s) AS seeker_id",
                                                   {"user_id": user_id})
-        if result.sinle() is None:
+        if result.single() is None:
             logging.error("Error while adding portfolio into Neo4J")
             return
 
@@ -44,13 +47,15 @@ class UserProfile:
         self._set_seeker_profile(SeekerProfile(user_id, portfolio_ref, seeker_node_ref))
 
 
-    # Returns False if the seeker profile was not set for a provided user
-    # Calling this method when user's seeker profile was already set results in runtime error
-    # A profile won't be set, thus returning False, if:
-    #   - there is no seeker profile associated with the provided user_id
-    # 
-    # Otherwise the method should return True
     def request_seeker_profile(self, psql_connection: PsqlConnection) -> bool:
+        """
+        Returns False if the seeker profile was not set for a provided user
+        Calling this method when user's seeker profile was already set results in runtime error
+        A profile won't be set, thus returning False, if:
+           - there is no seeker profile associated with the provided user_id
+
+        Otherwise, the method should return True
+        """
         assert psql_connection is not None
 
         user_id = self.get_id()
@@ -66,13 +71,15 @@ class UserProfile:
         return True
 
 
-    # Returns False is the recruiter profile was not set for a provided user
-    # Calling this method when user's recruiter profile was already set results in runtime error
-    # A profile won't be set, thus returning False, if:
-    #   - there is no recruiter profile associated with the provided user_id
-    # 
-    # Otherwise the method should return True
     def request_recruiter_profile(self, psql_connection: PsqlConnection) -> bool:
+        """
+        Returns False is the recruiter profile was not set for a provided user
+        Calling this method when user's recruiter profile was already set results in runtime error
+        A profile won't be set, thus returning False, if:
+          - there is no recruiter profile associated with the provided user_id
+
+        Otherwise, the method should return True
+        """
         assert psql_connection is not None
 
         user_id = self.get_id()

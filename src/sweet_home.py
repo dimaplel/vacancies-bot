@@ -95,6 +95,12 @@ class SweetHome:
                                            f"VALUES (%s, %s, %s)",
                                            user_id, user_profile.first_name, user_profile.last_name)
 
+    def add_seeker_profile(self, user_id, portfolio: dict):
+        assert self.request_user_profile(user_id) is not None
+        user_profile = self.request_user_profile(user_id)
+        user_profile.add_seeker_profile(portfolio,
+                                        self._mongodb_connection, self._neo4j_connection, self._sql_connection)
+
 
     def _sql_db_init(self):
         self._sql_connection.execute_query(f"""
@@ -158,8 +164,12 @@ async def enter_first_name(message: Message, state: FSMContext) -> None:
 async def enter_last_name(message: Message, state: FSMContext) -> None:
     await state.update_data(last_name=message.text)
     data = await state.get_data()
+    logging.info(data)
     user_profile = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
     menu.add_user_profile(user_profile=user_profile)
+    keyboard = UserProfileKeyboardMarkup()
     await message.answer("Your profile has been successfully registered! Choose from one of the options below.",
-                         reply_markup=function_choice_keyboard())
+                         reply_markup=keyboard.get_current_markup())
     await state.set_data({"profile": user_profile})
+    await state.set_state(EntryRegistrationStates.options_handle)
+
