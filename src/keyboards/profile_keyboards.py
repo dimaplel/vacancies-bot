@@ -24,25 +24,18 @@ class UserProfileKeyboardMarkup(SweetKeyboardMarkup):
 
     def set_type(self, kb_type):
         if kb_type is UserProfileKeyboardTypes.NONE:
-            self.set_buttons_value({
-                "seeker_button" : KeyboardButton(text="Create Seeker Profile"),
-                "recruiter_button" : KeyboardButton(text="Create Recruiter Profile")
-            })
+            self.set_button_value("seeker_button", "Create Seeker Profile"),
+            self.set_button_value("recruiter_button", "Create Recruiter Profile")
         elif kb_type is UserProfileKeyboardTypes.SEEKER:
-            self.set_buttons_value({
-                "seeker_button": KeyboardButton(text="Seeker Menu"),
-                "recruiter_button": KeyboardButton(text="Create Recruiter Profile")
-            })
+            self.set_button_value("seeker_button", "Seeker Menu"),
+            self.set_button_value("recruiter_button", "Create Recruiter Profile")
         elif kb_type is UserProfileKeyboardTypes.RECRUITER:
-            self.set_buttons_value({
-                "seeker_button" : KeyboardButton(text="Create Seeker Profile"),
-                "recruiter_button": KeyboardButton(text="Recruiter Menu")
-            })
+            self.set_button_value("seeker_button", "Create Seeker Profile"),
+            self.set_button_value("recruiter_button", "Recruiter Menu")
         else:
-            self.set_buttons_value({
-                "seeker_button": KeyboardButton(text="Seeker Menu"),
-                "recruiter_button": KeyboardButton(text="Recruiter Menu")
-            })
+            self.set_button_value("seeker_button", "Seeker Menu"),
+            self.set_button_value("recruiter_button", "Recruiter Menu")
+
 
         self.update_markup()
 

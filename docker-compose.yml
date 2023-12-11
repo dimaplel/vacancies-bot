@@ -50,6 +50,7 @@ services:
       - pgsql
       - mongodb
       - redis
+      - neo4j
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

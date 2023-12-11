@@ -5,11 +5,11 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 
 class SweetKeyboardMarkup:
-    def set_buttons_value(self, data: Dict[str, KeyboardButton]) -> bool:
-        if len(set(data.keys()).intersection(set(self._keyboard_buttons.keys()))) != len(data):
+    def set_button_value(self, button: str, value: str) -> bool:
+        if not button in self._keyboard_buttons:
             return False
 
-        self._keyboard_buttons.update(data)
+        self._keyboard_buttons[button] = value
         return True
 
 
