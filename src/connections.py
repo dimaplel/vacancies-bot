@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional, Union, Dict, Any
 
 import neo4j
@@ -88,9 +89,10 @@ class Neo4jConnection:
         try:
             uri = f"bolt://{self.host}:{self.port}"
             logging.info(f"Connecting to neo4j database with uri {uri}")
-            with neo4j.GraphDatabase.driver(uri=uri, auth=(self.user, self.password)) as driver:
-                driver.verify_connectivity()
-            self._driver = neo4j.GraphDatabase.driver(uri=uri, auth=(self.user, self.password))
+            time.sleep(15)
+            driver = neo4j.GraphDatabase.driver(uri=uri, auth=(self.user, self.password))
+            driver.verify_connectivity()
+            self._driver = driver
         except Exception as e:
             logging.error("Error while opening connection in %s: %s" % (self.__class__.__name__, e))
 
