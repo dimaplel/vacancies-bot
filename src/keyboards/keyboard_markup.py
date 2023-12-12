@@ -9,7 +9,7 @@ class SweetKeyboardMarkup:
         if not button in self._keyboard_buttons:
             return False
 
-        self._keyboard_buttons[button] = value
+        self._keyboard_buttons[button] = KeyboardButton(text=value)
         return True
 
 

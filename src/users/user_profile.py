@@ -35,15 +35,15 @@ class UserProfile:
                            psql_connection: PsqlConnection):
         user_id = self.get_id()
         portfolio_ref = mongodb_connection.insert_document("portfolios", portfolio)
-        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: %d}) RETURN ID(s) AS seeker_id",
-                                                  {"user_id": user_id})
-        if result.single() is None:
+        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: $user_id}) RETURN ID(s) AS seeker_id",
+                                            {"user_id": user_id})
+        if len(result) == 0:
             logging.error("Error while adding portfolio into Neo4J")
             return
 
-        seeker_node_ref = result.single()["seeker_id"]
-        psql_connection.execute_query(f"INSERT INTO seeker_profiles VALUES "
-                                      f"({user_id}, {portfolio_ref}, {seeker_node_ref})")
+        seeker_node_ref = result[0]["seeker_id"]
+        psql_connection.execute_query("INSERT INTO seeker_profiles VALUES (%s, %s, %s)",
+                                      user_id, portfolio_ref, seeker_node_ref)
         self._set_seeker_profile(SeekerProfile(user_id, portfolio_ref, seeker_node_ref))
 
 

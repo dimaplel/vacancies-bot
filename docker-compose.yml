@@ -6,7 +6,7 @@ services:
     volumes:
       - ./postgres:/var/lib/postgresql/data:rw
     ports:
-      - 5432:5432
+      - "5432:5432"
     env_file:
       - ./.env
 
@@ -14,7 +14,7 @@ services:
     image: mongo:7.0
     restart: unless-stopped
     ports:
-      - 27017:27017
+      - "27017:27017"
     env_file:
       - ./.env
     volumes:
@@ -28,6 +28,8 @@ services:
     environment:
       USERNAME: ${REDIS_USERNAME}
       PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
     env_file:
       - ./.env
 
