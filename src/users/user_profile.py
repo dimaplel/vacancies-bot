@@ -59,12 +59,10 @@ class UserProfile:
         assert psql_connection is not None
 
         user_id = self.get_id()
-        queryResult = psql_connection.execute_query(f"SELECT * FROM seeker_profiles WHERE user_id = {user_id}")
-        if queryResult is None:
+        row = psql_connection.execute_query_fetchone(f"SELECT * FROM seeker_profiles WHERE user_id = {user_id}")
+        if row is None:
             return False
 
-        assert len(queryResult) == 1
-        row = queryResult[0]
         portfolio_ref = row['portfolio_ref']
         seeker_node_ref = row['seeker_node_ref']
         self._set_seeker_profile(SeekerProfile(user_id, portfolio_ref, seeker_node_ref))
@@ -83,12 +81,10 @@ class UserProfile:
         assert psql_connection is not None
 
         user_id = self.get_id()
-        queryResult = psql_connection.execute_query(f"SELECT * FROM recruiter_profiles WHERE user_id = {user_id}")
-        if queryResult is None:
+        row = psql_connection.execute_query_fetchone(f"SELECT * FROM recruiter_profiles WHERE user_id = {user_id}")
+        if row is None:
             return False
 
-        assert len(queryResult) == 1
-        row = queryResult[0]
         company_id: int = int(row['company_id'])
         recruiter_node_ref = row['recruiter_node_ref']
         self._set_recruiter_profile(RecruiterProfile(user_id, company_id, recruiter_node_ref))

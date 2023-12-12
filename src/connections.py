@@ -5,7 +5,8 @@ import neo4j
 import psycopg2
 import pymongo
 import redis
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, RealDictRow
+from pymongo.collection import Collection
 from pymongo.errors import ConnectionFailure
 
 
@@ -38,7 +39,7 @@ class PsqlConnection:
             logging.error("Error while closing connection in %s: %s" % (self.__class__.__name__, e))
             
 
-    def execute_query(self, query: str, *args):
+    def execute_query(self, query: str, *args) -> (list[RealDictRow] | None):
         if self.cur is not None:
             try:
                 self.cur.execute(query, args)
@@ -49,6 +50,24 @@ class PsqlConnection:
 
                 result = self.cur.fetchall()
                 return None if len(result) == 0 else result
+            except Exception as e:
+                logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
+        else:
+            logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
+            return None
+
+
+    def execute_query_fetchone(self, query: str, *args) -> (RealDictRow | None):
+        if self.cur is not None:
+            try:
+                self.cur.execute(query, args)
+
+                # Check if there are results to fetch. If desc is none - there is no results
+                if self.cur.description is None:
+                    return None
+
+                result = self.cur.fetchone()
+                return result
             except Exception as e:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
@@ -170,7 +189,7 @@ class MongoDBConnection:
             return None
 
 
-    def get_document(self, collection_name: str, doc_id: str) -> Optional[Dict[str, Any]]:
+    def get_document(self, collection_name: str, doc_id: str) -> (Dict[str, Any] | None):
         try:
             collection = self.db[collection_name]
             document = collection.find_one({"_id": doc_id})
@@ -180,3 +199,12 @@ class MongoDBConnection:
         except Exception as e:
             logging.error(f"Error getting document from MongoDB: {e}")
             return None
+
+
+    def update_document(self, collection_name: str, doc_id: str, document: Dict[str, Any]) -> bool:
+        collection: Collection = self.db[collection_name]
+        filter_condition = {"_id": doc_id}
+        result = collection.update_one(filter=filter_condition, update={"$set": document})
+        return True if (result.acknowledged 
+            and result.matched_count > 0 
+            and result.modified_count > 0) else False
