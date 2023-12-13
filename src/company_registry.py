@@ -1,7 +1,7 @@
 from typing import Dict
 
-from src.connections import PsqlConnection
-from src.users.company import Company
+from connections import PsqlConnection
+from users.company import Company
 
 
 class CompanyRegistry:
@@ -21,10 +21,20 @@ class CompanyRegistry:
         if row is None:
             return None
 
-        company_name = row['name']
+        company_name = row[0]['name']
         company = Company(company_id, company_name)
         self._add_company_to_cache(company)
         return company
+
+
+    def search_by_name(self, name: str) -> (list[Company] | None):
+        rows = self._sql_connection.execute_query(f"SELECT * FROM companies WHERE name ILIKE %s",
+                                                 name + '%',)
+        if rows is None:
+            return None
+
+        companies = [Company(row["company_id"], row["name"]) for row in rows]
+        return companies
 
 
     def _get_company_from_cache(self, company_id: int) -> (Company | None):

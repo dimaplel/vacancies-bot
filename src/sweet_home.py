@@ -10,11 +10,10 @@ from aiogram import Router
 
 from states.entry_registration_states import EntryRegistrationStates
 from config import cfg
-from src.connections import PsqlConnection
-from src.connections import Neo4jConnection, RedisConnection, MongoDBConnection
-from keyboards.profile_keyboards import UserProfileKeyboardMarkup
-
+from connections import PsqlConnection
+from connections import Neo4jConnection, RedisConnection, MongoDBConnection
 from users.user_profile import UserProfile
+from company_registry import CompanyRegistry
 
 
 class SweetHome:
@@ -43,6 +42,7 @@ class SweetHome:
             cfg.neo4j_password.get_secret_value()
         )
         self._user_cache: Dict[int, UserProfile] = {}
+        self._company_registry: CompanyRegistry = CompanyRegistry(self._sql_connection)
 
         try:
             logging.info("Opening databases connections")
@@ -91,9 +91,13 @@ class SweetHome:
         assert self.request_user_profile(user_profile.get_id()) is None
         user_id = user_profile.get_id()
         self._user_cache[user_id] = user_profile
-        # self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
-        #                                    f"VALUES (%s, %s, %s)",
-        #                                    user_id, user_profile.first_name, user_profile.last_name)
+        self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
+                                           f"VALUES (%s, %s, %s)",
+                                           user_id, user_profile.first_name, user_profile.last_name)
+
+
+    def search_company_by_name(self, name: str):
+        return self._company_registry.search_by_name(name)
 
     def add_seeker_profile(self, user_id, portfolio: dict):
         assert self.request_user_profile(user_id) is not None

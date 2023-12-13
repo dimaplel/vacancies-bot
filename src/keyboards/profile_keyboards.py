@@ -19,7 +19,7 @@ class UserProfileKeyboardMarkup(SweetKeyboardMarkup):
             "edit_profile_button" : KeyboardButton(text="Edit Profile 👤")
         }
 
-        self.update_markup()
+        self.update_markup(2, 1)
 
 
     def set_type(self, kb_type):

@@ -10,6 +10,7 @@ from keyboards.profile_keyboards import UserProfileKeyboardMarkup, UserProfileKe
 from keyboards.inline_keyboards import no_experience_keyboard, portfolio_addition_keyboard
 from states.seeker_registration_states import SeekerRegistrationStates
 from states.entry_registration_states import EntryRegistrationStates
+from states.recruiter_registration_states import RecruiterRegistrationStates
 
 
 profile_markup = UserProfileKeyboardMarkup()
@@ -33,7 +34,8 @@ async def register_seeker(message: types.Message, state: FSMContext):
         # TODO: implement menu for existing seeker
         return
     await message.answer("To become a seeker, you should make a portfolio.\n\n"
-                         "Enter the position you would like to apply for.")
+                         "Enter the position you would like to apply for.",
+                         reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
     await state.set_state(SeekerRegistrationStates.position)
 
 
@@ -56,7 +58,7 @@ async def no_prior_experience(call: types.CallbackQuery, state: FSMContext):
     menu.add_seeker_profile(call.from_user.id, portfolio)
     current_markup = user_profile.user_markup
     current_markup.set_button_value("seeker_button", "Seeker menu")
-    current_markup.update_markup()
+    current_markup.update_markup(2, 1)
     await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
                               f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" +
@@ -73,7 +75,9 @@ async def add_experience_title(message: types.Message, state: FSMContext):
     if data.get("experiences") is None:
         await state.update_data(experiences=[{"title": message.text}])
     else:
-        await state.update_data(experiences=data["experiences"].append({"title": message.text}))
+        data["experiences"].append({"title": message.text})
+        # await state.update_data(experiences=data["experiences"])
+    logging.info(f"Current portfolio: {data.get('experiences')}")
     await message.answer("Noted! Now, enter the description of your previous experience.")
     await state.set_state(SeekerRegistrationStates.experience_desc)
 
@@ -81,6 +85,7 @@ async def add_experience_title(message: types.Message, state: FSMContext):
 @profile_router.message(F.text, SeekerRegistrationStates.experience_desc)
 async def add_experience_desc(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    logging.info(f"Current portfolio: {data.get('experiences')}")
     experiences = data.get("experiences")
     exp_idx = len(experiences) - 1
     experiences[exp_idx].update({"desc": message.text})
@@ -111,22 +116,56 @@ async def add_experience_timeline(message: types.Message, state: FSMContext):
 async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     user_profile: UserProfile = data["profile"]
-    menu.add_seeker_profile(call.from_user.id, data.get("experiences"))
+    portfolio = {"position": data.get("position"), "experiences": data.get("experiences")}
+    menu.add_seeker_profile(call.from_user.id, portfolio)
     current_markup = user_profile.user_markup
     current_markup.set_button_value("seeker_button", "Seeker menu")
-    current_markup.update_markup()
+    current_markup.update_markup(2, 1)
     experiences_text = ""
     for exp in data.get("experiences"):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
-                             f"{Bold('— Description: ').as_html()} {exp['desc']}"
-                             f"{Bold('— Duration').as_html()} {exp['timeline']}")
+                             f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
+                             f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
 
     await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
                               f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" 
-                              f"{Bold('— Portfolio: ')}\n\n{experiences_text}" +
+                              f"{Bold('— Portfolio: ').as_html()}\n\n{experiences_text}" +
                               Italic("You may now access seeker menu!").as_html(),
                               parse_mode="HTML",
                               reply_markup=user_profile.user_markup.get_current_markup())
     await call.message.delete()
-    await state.set_state(state=None)
+    await state.set_state(state=EntryRegistrationStates.options_handle)
+
+
+@profile_router.callback_query(F.data == "add-exp", SeekerRegistrationStates.confirm_or_add_portfolio)
+async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer(f"Let's add another experience!\n\n"
+                         f"Enter your experience title {Italic('For instance: Developer at ABC Inc.').as_html()}",
+                         parse_mode="HTML")
+    logging.info(f"Current portfolio: {(await state.get_data()).get('experiences')}")
+    await state.set_state(SeekerRegistrationStates.experience_title)
+
+
+@profile_router.message(F.text == register_profile_buttons[1], EntryRegistrationStates.options_handle)
+async def register_recruiter(message:types.Message, state: FSMContext):
+    data = await state.get_data()
+    user_profile: UserProfile = data["profile"]
+    if user_profile.has_seeker_profile():
+        # TODO: implement menu for existing recruiter
+        return
+    await message.answer("To become a recruiter, you should choose/create a company you're hiring for.\n\n"
+                         "Enter the name of your company and we will search for it.",
+                         reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
+    await state.set_state(RecruiterRegistrationStates.enter_company)
+
+
+@profile_router.message(F.text, RecruiterRegistrationStates.enter_company)
+async def search_for_company(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    user_profile: UserProfile = data["profile"]
+    result = menu.search_company_by_name(message.text)
+    if len(result) > 5:
+        await state.update_data(page=0)
+
+    for company in result:
