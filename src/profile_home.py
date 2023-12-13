@@ -168,4 +168,4 @@ async def search_for_company(message: types.Message, state: FSMContext):
     if len(result) > 5:
         await state.update_data(page=0)
 
-    for company in result:
+    # for company in result:
