@@ -6,3 +6,4 @@ class SeekerRegistrationStates(StatesGroup):
     experience_title = State()
     experience_desc = State()
     experience_timeline = State()
+    confirm_or_add_portfolio = State()

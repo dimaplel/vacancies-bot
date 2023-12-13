@@ -91,9 +91,9 @@ class SweetHome:
         assert self.request_user_profile(user_profile.get_id()) is None
         user_id = user_profile.get_id()
         self._user_cache[user_id] = user_profile
-        self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
-                                           f"VALUES (%s, %s, %s)",
-                                           user_id, user_profile.first_name, user_profile.last_name)
+        # self._sql_connection.execute_query(f"INSERT INTO user_profiles (user_id, first_name, last_name) "
+        #                                    f"VALUES (%s, %s, %s)",
+        #                                    user_id, user_profile.first_name, user_profile.last_name)
 
     def add_seeker_profile(self, user_id, portfolio: dict):
         assert self.request_user_profile(user_id) is not None
@@ -167,9 +167,8 @@ async def enter_last_name(message: Message, state: FSMContext) -> None:
     logging.info(data)
     user_profile = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
     menu.add_user_profile(user_profile=user_profile)
-    keyboard = UserProfileKeyboardMarkup()
     await message.answer("Your profile has been successfully registered! Choose from one of the options below.",
-                         reply_markup=keyboard.get_current_markup())
+                         reply_markup=user_profile.user_markup.get_current_markup())
     await state.set_data({"profile": user_profile})
     await state.set_state(EntryRegistrationStates.options_handle)
 
