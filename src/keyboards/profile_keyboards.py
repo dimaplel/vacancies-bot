@@ -23,3 +23,12 @@ class SeekerProfileKeyboardMarkup(SweetKeyboardMarkup):
             "search_vacancies_button" : KeyboardButton(text="Search Vacancies")
         }
         self.update_markup()
+        
+
+class RecruiterProfileKeyboardMarkup(SweetKeyboardMarkup):
+    def __init__(self):
+        self._keyboard_markup: dict[str, KeyboardButton] = {
+            "add_vacancy_button" : KeyboardButton(text="Add Vacancy"),
+            "your_vacancies_button" : KeyboardButton(text="Your Vacancies"),
+        }
+        self.update_markup()
