@@ -14,6 +14,7 @@ from connections import PsqlConnection
 from connections import Neo4jConnection, RedisConnection, MongoDBConnection
 from users.user_profile import UserProfile
 from company_registry import CompanyRegistry
+from seeker_home import SeekerHome
 
 
 class SweetHome:
@@ -42,6 +43,7 @@ class SweetHome:
             cfg.neo4j_password.get_secret_value()
         )
         self._user_cache: Dict[int, UserProfile] = {}
+        self.seeker_home: SeekerHome = SeekerHome(self._sql_connection, self._mongodb_connection)
         self._company_registry: CompanyRegistry = CompanyRegistry(self._sql_connection)
 
         try:
@@ -145,11 +147,13 @@ menu = SweetHome()
 @entry_router.message(CommandStart())
 async def entry_handler(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
-    if menu.request_user_profile(user_id) is not None:
-        # TODO: implement menu for existing user
+    user_profile = menu.request_user_profile(user_id)
+    if user_profile is not None:
+        markup = user_profile.user_markup.get_current_markup()
+        await message.answer("Welcome back! Choose from one of the options below.", reply_markup=markup)
+        await state.set_state(EntryRegistrationStates.options_handle)
+        await state.set_data({"profile": user_profile})
         return
-        # kb: ReplyKeyboardBuilder = CreationMenuKeyboard()
-        # await message.answer("Welcome back! Choose from one of the options below.", reply_markup=kb)
     
     await message.answer(f"Welcome to the Vacancies Bot 👨‍💻\n\n"
                          f"For registration purposes, enter your {Italic('first name').as_html()}.", parse_mode="HTML")
@@ -168,7 +172,6 @@ async def enter_first_name(message: Message, state: FSMContext) -> None:
 async def enter_last_name(message: Message, state: FSMContext) -> None:
     await state.update_data(last_name=message.text)
     data = await state.get_data()
-    logging.info(data)
     user_profile = UserProfile(message.from_user.id, data["first_name"], data["last_name"])
     menu.add_user_profile(user_profile=user_profile)
     await message.answer("Your profile has been successfully registered! Choose from one of the options below.",

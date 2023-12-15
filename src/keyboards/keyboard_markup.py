@@ -5,6 +5,11 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 
 class SweetKeyboardMarkup:
+    def __init__(self):
+        self._keyboard_buttons = None
+        self._keyboard_markup = None
+
+
     def set_button_value(self, button: str, value: str) -> bool:
         if not button in self._keyboard_buttons:
             return False
@@ -27,3 +32,7 @@ class SweetKeyboardMarkup:
     def get_current_markup(self) -> ReplyKeyboardMarkup:
         assert self._keyboard_markup is not None
         return self._keyboard_markup
+
+
+    def get_button_text(self, key: str):
+        return self._keyboard_buttons.get(key).text

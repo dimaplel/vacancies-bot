@@ -7,7 +7,10 @@ from aiogram.utils.formatting import Italic, Bold
 from users.user_profile import UserProfile
 from sweet_home import menu
 from keyboards.profile_keyboards import UserProfileKeyboardMarkup, UserProfileKeyboardTypes
-from keyboards.inline_keyboards import no_experience_keyboard, portfolio_addition_keyboard
+from keyboards.inline_keyboards import (no_experience_keyboard,
+                                        portfolio_addition_keyboard,
+                                        search_or_register_keyboard,
+                                        companies_choice_keyboard)
 from states.seeker_registration_states import SeekerRegistrationStates
 from states.entry_registration_states import EntryRegistrationStates
 from states.recruiter_registration_states import RecruiterRegistrationStates
@@ -28,8 +31,7 @@ profile_router = Router()
 
 @profile_router.message(F.text == register_profile_buttons[0], EntryRegistrationStates.options_handle) # Seeker menu button
 async def register_seeker(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    user_profile: UserProfile = data["profile"]
+    user_profile: UserProfile = menu.request_user_profile(message.from_user.id)
     if user_profile.has_seeker_profile():
         # TODO: implement menu for existing seeker
         return
@@ -162,10 +164,25 @@ async def register_recruiter(message:types.Message, state: FSMContext):
 
 @profile_router.message(F.text, RecruiterRegistrationStates.enter_company)
 async def search_for_company(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    user_profile: UserProfile = data["profile"]
     result = menu.search_company_by_name(message.text)
+    await state.update_data(company_name=message.text)
+    if result is None:
+        await message.answer("Hmmm, we didn't find your company in registered ones. "
+                             "Would you like to register your company or try another name?",
+                             reply_markup=search_or_register_keyboard())
+        await state.set_state(RecruiterRegistrationStates.register_or_retry)
+        return
+
     if len(result) > 5:
         await state.update_data(page=0)
 
-    # for company in result:
+    await state.update_data(companies=result)
+    await message.answer("Select the company from the list below or register a new one.",
+                         reply_markup=companies_choice_keyboard(result, page=0))
+    await state.set_state(RecruiterRegistrationStates.enter_company)
+
+
+@profile_router.callback_query(F.data == "search-again", RecruiterRegistrationStates.register_or_retry)
+async def retry_search(call: types.CallbackQuery, state: FSMContext):
+    await call.message.edit_text("OK, let's try again: Enter the name of your company and we will search for it.")
+    await state.set_state(RecruiterRegistrationStates.enter_company)
