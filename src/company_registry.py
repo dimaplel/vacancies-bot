@@ -17,11 +17,11 @@ class CompanyRegistry:
             return company
 
         # if there is no company in cache - query psql connection
-        row = self._sql_connection.execute_query(f"SELECT * FROM companies WHERE company_id = {company_id}")
+        row = self._sql_connection.execute_query_fetchone(f"SELECT * FROM companies WHERE company_id = {company_id}")
         if row is None:
             return None
 
-        company_name = row[0]['name']
+        company_name = row['name']
         company = Company(company_id, company_name)
         self._add_company_to_cache(company)
         return company

@@ -3,11 +3,9 @@ import asyncio
 import sys
 
 from aiogram import Bot, Dispatcher
-from aiogram.filters import Command
-from aiogram.types import Message
 
-from sweet_home import entry_router
-from profile_home import profile_router
+from routers.entry_router import entry_router
+from routers.profile_router import profile_router
 from config import cfg
 
 

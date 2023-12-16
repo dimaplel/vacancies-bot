@@ -4,41 +4,60 @@ from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.formatting import Italic, Bold
 
+from sweet_home import sweet_home
 from users.user_profile import UserProfile
-from sweet_home import menu
-from keyboards.profile_keyboards import UserProfileKeyboardMarkup, UserProfileKeyboardTypes
 from keyboards.inline_keyboards import (no_experience_keyboard,
                                         portfolio_addition_keyboard,
                                         search_or_register_keyboard,
                                         companies_choice_keyboard)
-from states.seeker_registration_states import SeekerRegistrationStates
-from states.entry_registration_states import EntryRegistrationStates
-from states.recruiter_registration_states import RecruiterRegistrationStates
+from states.registration_states import EntryRegistrationStates, SeekerRegistrationStates, RecruiterRegistrationStates
 
 
-profile_markup = UserProfileKeyboardMarkup()
-register_profiles_keyboard = profile_markup.get_current_markup()
-register_profile_buttons = [button.text for row in register_profiles_keyboard.keyboard for button in row]
-profile_markup.set_type(UserProfileKeyboardTypes.SEEKER)
-seeker_access_keyboard = profile_markup.get_current_markup()
-profile_markup.set_type(UserProfileKeyboardTypes.RECRUITER)
-recruiter_access_keyboard = profile_markup.get_current_markup()
-profile_markup.set_type(UserProfileKeyboardTypes.FULL)
-full_access_keyboard = profile_markup.get_current_markup()
+# profile_markup = UserProfileKeyboardMarkup()
+# register_profiles_keyboard = profile_markup.get_current_markup()
+# register_profile_buttons = [button.text for row in register_profiles_keyboard.keyboard for button in row]
+# profile_markup.set_type(UserProfileKeyboardTypes.SEEKER)
+# seeker_access_keyboard = profile_markup.get_current_markup()
+# profile_markup.set_type(UserProfileKeyboardTypes.RECRUITER)
+# recruiter_access_keyboard = profile_markup.get_current_markup()
+# profile_markup.set_type(UserProfileKeyboardTypes.FULL)
+# full_access_keyboard = profile_markup.get_current_markup()
 
 
-profile_router = Router()
+profile_router = Router(name="Profile Router")
 
-@profile_router.message(F.text == register_profile_buttons[0], EntryRegistrationStates.options_handle) # Seeker menu button
+
+# Handle options from profile menu
+@profile_router.message(EntryRegistrationStates.options_handle)
 async def register_seeker(message: types.Message, state: FSMContext):
-    user_profile: UserProfile = menu.request_user_profile(message.from_user.id)
-    if user_profile.has_seeker_profile():
-        # TODO: implement menu for existing seeker
-        return
-    await message.answer("To become a seeker, you should make a portfolio.\n\n"
-                         "Enter the position you would like to apply for.",
-                         reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
-    await state.set_state(SeekerRegistrationStates.position)
+    user_profile: UserProfile = sweet_home.request_user_profile(message.from_user.id)
+    user_markup = user_profile.user_markup
+    if message.text == user_markup.get_button_text("seeker_button"):
+        if not user_profile.has_seeker_profile() and not sweet_home.profile_home.request_seeker_profile(user_profile):
+            # Do seeker profile registration
+            await message.answer("To become a seeker, you will need to make a portfolio.\n\n"
+                                "Enter the position you would like to apply for.",
+                                reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
+            await state.set_state(SeekerRegistrationStates.position)
+        else:
+            # TODO: Implement logic for existing seeker profile
+            pass
+
+    elif message.text == user_markup.get_button_text("recruiter_button"):
+        if not user_profile.has_recruiter_profile() and not sweet_home.profile_home.request_recruiter_profile(user_profile): 
+            # Do recruiter profile registration
+            await message.answer("To become a recruiter, you should choose/create a company you're hiring for.\n\n"
+                                "Enter the name of your company and we will search for it.",
+                                reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
+            await state.set_state(RecruiterRegistrationStates.enter_company)
+
+        else:
+            # TODO: Implement logic for existing recruiter profile
+            pass
+
+    elif message.text == user_markup.get_button_text("edit_profile_button"):
+        # Do profile editing logic
+        pass
 
 
 @profile_router.message(F.text, SeekerRegistrationStates.position)
@@ -56,11 +75,10 @@ async def ask_experience_title(message: types.Message, state: FSMContext):
 async def no_prior_experience(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     portfolio = {"position": data["position"], "experiences": []}
-    user_profile: UserProfile = data["profile"]
-    menu.add_seeker_profile(call.from_user.id, portfolio)
-    current_markup = user_profile.user_markup
-    current_markup.set_button_value("seeker_button", "Seeker menu")
-    current_markup.update_markup(2, 1)
+
+    user_profile: UserProfile = sweet_home.request_user_profile(call.from_user.id)
+    sweet_home.profile_home.add_seeker_profile(user_profile, portfolio)
+
     await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
                               f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" +
@@ -119,10 +137,7 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     user_profile: UserProfile = data["profile"]
     portfolio = {"position": data.get("position"), "experiences": data.get("experiences")}
-    menu.add_seeker_profile(call.from_user.id, portfolio)
-    current_markup = user_profile.user_markup
-    current_markup.set_button_value("seeker_button", "Seeker menu")
-    current_markup.update_markup(2, 1)
+    sweet_home.profile_home.add_seeker_profile(user_profile, portfolio)
     experiences_text = ""
     for exp in data.get("experiences"):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
@@ -149,22 +164,9 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(SeekerRegistrationStates.experience_title)
 
 
-@profile_router.message(F.text == register_profile_buttons[1], EntryRegistrationStates.options_handle)
-async def register_recruiter(message:types.Message, state: FSMContext):
-    data = await state.get_data()
-    user_profile: UserProfile = data["profile"]
-    if user_profile.has_seeker_profile():
-        # TODO: implement menu for existing recruiter
-        return
-    await message.answer("To become a recruiter, you should choose/create a company you're hiring for.\n\n"
-                         "Enter the name of your company and we will search for it.",
-                         reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
-    await state.set_state(RecruiterRegistrationStates.enter_company)
-
-
 @profile_router.message(F.text, RecruiterRegistrationStates.enter_company)
 async def search_for_company(message: types.Message, state: FSMContext):
-    result = menu.search_company_by_name(message.text)
+    result = sweet_home.search_company_by_name(message.text)
     await state.update_data(company_name=message.text)
     if result is None:
         await message.answer("Hmmm, we didn't find your company in registered ones. "

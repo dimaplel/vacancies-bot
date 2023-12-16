@@ -40,7 +40,10 @@ class PsqlConnection:
             logging.error("Error while closing connection in %s: %s" % (self.__class__.__name__, e))
             
 
-    def execute_query(self, query: str, *args) -> (list[RealDictRow] | None):
+    def execute_query(self, query: str, *args) -> (list[RealDictRow] | bool | None):
+        """
+        Returns False if failed to execute a query
+        """
         if self.cur is not None:
             try:
                 self.cur.execute(query, args)
@@ -55,10 +58,13 @@ class PsqlConnection:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
             logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
-            return None
+            return False
 
 
-    def execute_query_fetchone(self, query: str, *args) -> (RealDictRow | None):
+    def execute_query_fetchone(self, query: str, *args) -> (RealDictRow | bool | None):
+        """
+        Returns False if failed to execute a query
+        """
         if self.cur is not None:
             try:
                 self.cur.execute(query, args)
@@ -73,7 +79,7 @@ class PsqlConnection:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
             logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
-            return None
+            return False
 
 
 class Neo4jConnection:
@@ -85,16 +91,34 @@ class Neo4jConnection:
         self.port = port
 
 
+    def _internal_connect(self) -> bool:
+        """
+        Return True if was able to connect successfully, otherwise - False
+        """
+        start_time = time.time()
+        timeout = 60  # Timeout in seconds
+
+        while time.time() - start_time < timeout:
+            try:
+                uri = f"bolt://{self.host}:{self.port}"
+                logging.info(f"Attempting to connect to neo4j database with uri {uri}")
+                driver = neo4j.GraphDatabase.driver(uri=uri, auth=(self.user, self.password))
+                driver.verify_connectivity()
+                self._driver = driver
+                logging.info("Successfully connected to the Neo4j database.")
+                return
+            except Exception as e:
+                logging.error(f"Connection failed: {e}")
+                time.sleep(5)  # Wait for 5 seconds before retrying
+
+        logging.error("Failed to connect to the Neo4j database within the timeout period.")
+
+
     def open(self):
-        try:
-            uri = f"bolt://{self.host}:{self.port}"
-            logging.info(f"Connecting to neo4j database with uri {uri}")
-            time.sleep(15)
-            driver = neo4j.GraphDatabase.driver(uri=uri, auth=(self.user, self.password))
-            driver.verify_connectivity()
-            self._driver = driver
-        except Exception as e:
-            logging.error("Error while opening connection in %s: %s" % (self.__class__.__name__, e))
+        if not self._internal_connect():
+            logging.error("Error while opening connection in %s", (self.__class__.__name__))
+        else:
+            logging.info("Successfully initialized Neo4j connection")
 
 
     def close(self):

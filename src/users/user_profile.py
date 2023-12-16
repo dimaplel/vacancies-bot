@@ -33,18 +33,41 @@ class UserProfile:
 
     def add_seeker_profile(self, portfolio: dict, mongodb_connection: MongoDBConnection, neo4j_connection: Neo4jConnection,
                            psql_connection: PsqlConnection):
+        assert not self.request_seeker_profile(psql_connection)
         user_id = self.get_id()
         portfolio_ref = mongodb_connection.insert_document("portfolios", portfolio)
         result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: $user_id}) RETURN ID(s) AS seeker_id",
                                             {"user_id": user_id})
-        if len(result) == 0:
-            logging.error("Error while adding portfolio into Neo4J")
+        if len(result) != 1:
+            logging.error("Error while adding seeker to the neo4j graph")
             return
 
         seeker_node_ref = result[0]["seeker_id"]
         psql_connection.execute_query("INSERT INTO seeker_profiles VALUES (%s, %s, %s)",
                                       user_id, portfolio_ref, seeker_node_ref)
         self._set_seeker_profile(SeekerProfile(user_id, portfolio_ref, seeker_node_ref))
+
+
+    def add_recruiter_profile(self, company_id: int, neo4j_connection: Neo4jConnection, psql_connection: PsqlConnection):
+        """
+        We assert that company_id is a valid ID of a company in sql "companies" table
+        """
+        assert not self.request_recruiter_profile(psql_connection)
+        user_id = self.get_id()
+        result = neo4j_connection.run_query("CREATE (r:Recruiter {user_id: $user_id}) RETURN ID(s) AS recruiter_id",
+                                            {"user_id": user_id})
+        if len(result) != 1:
+            logging.error("Error while adding recruiter to the neo4j graph")
+            return
+
+        recruiter_node_ref = result[0]["recruiter_id"]
+        if psql_connection.execute_query("INSERT INTO recruiter_profiles VALUES (%s, %s, %s)",
+                                        user_id, recruiter_node_ref, company_id) is False:
+            # We need to check if we were able to insert a profile because we might not satisfy foreign key conditions
+            logging.error("Failed to insert a recruiter profile into the sql table. Aborting...")
+            return
+
+        self._set_recruiter_profile(RecruiterProfile(user_id, company_id, recruiter_node_ref))
 
 
     def request_seeker_profile(self, psql_connection: PsqlConnection) -> bool:
@@ -57,6 +80,8 @@ class UserProfile:
         Otherwise, the method should return True
         """
         assert psql_connection is not None
+        if self.has_seeker_profile():
+            return True
 
         user_id = self.get_id()
         row = psql_connection.execute_query_fetchone(f"SELECT * FROM seeker_profiles WHERE user_id = {user_id}")
@@ -79,6 +104,8 @@ class UserProfile:
         Otherwise, the method should return True
         """
         assert psql_connection is not None
+        if self.has_recruiter_profile():
+            return True
 
         user_id = self.get_id()
         row = psql_connection.execute_query_fetchone(f"SELECT * FROM recruiter_profiles WHERE user_id = {user_id}")
@@ -104,6 +131,7 @@ class UserProfile:
         assert not self.has_seeker_profile()
         assert seeker_profile.get_id() == self.get_id() # They should have same id
         self.user_markup.set_button_value("seeker_button", "Seeker Menu 🔍")
+        self.user_markup.update_markup(2, 1)
         self.seeker_ref = seeker_profile
 
 
@@ -112,6 +140,7 @@ class UserProfile:
         assert not self.has_recruiter_profile()
         assert recruiter_profile.get_id() == self.get_id() # They should have same id
         self.user_markup.set_button_value("recruiter_button", "Recruiter Menu 📝")
+        self.user_markup.update_markup(2, 1)
         self.recruiter_ref = recruiter_profile
 
 
