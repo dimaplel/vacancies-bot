@@ -4,9 +4,10 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram import Router
 
-from states.registration_states import EntryRegistrationStates
-from sweet_home import sweet_home
-from users.user_profile import UserProfile
+from src.states.registration_states import EntryRegistrationStates
+from src.states.menu_states import MenuStates
+from src.sweet_home import sweet_home
+from src.users.user_profile import UserProfile
 
 
 entry_router = Router(name="Entry Router")
@@ -19,7 +20,7 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
     if user_profile is not None:
         markup = user_profile.user_markup.get_current_markup()
         await message.answer("Welcome back! Choose from one of the options below.", reply_markup=markup)
-        await state.set_state(EntryRegistrationStates.options_handle)
+        await state.set_state(MenuStates.options_handle)
         await state.set_data({"profile": user_profile})
         return
     
@@ -45,4 +46,4 @@ async def enter_last_name(message: Message, state: FSMContext) -> None:
     await message.answer("Your profile has been successfully registered! Choose from one of the options below.",
                          reply_markup=user_profile.user_markup.get_current_markup())
     await state.set_data({"profile": user_profile})
-    await state.set_state(EntryRegistrationStates.options_handle)
+    await state.set_state(MenuStates.options_handle)

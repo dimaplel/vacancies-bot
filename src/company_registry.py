@@ -1,12 +1,13 @@
 from typing import Dict
 
-from connections import PsqlConnection
+from connections import PsqlConnection, RedisConnection
 from users.company import Company
 
 
 class CompanyRegistry:
-    def __init__(self, psql_connection: PsqlConnection):
+    def __init__(self, psql_connection: PsqlConnection, redis_connection: RedisConnection):
         self._sql_connection = psql_connection
+        self._redis_connection = redis_connection
         self._companies: Dict[int, Company] = {}
 
 
@@ -36,6 +37,11 @@ class CompanyRegistry:
         companies = [Company(row["company_id"], row["name"]) for row in rows]
         return companies
 
+
+    def get_metrics(self, company_id: int) -> dict[str, int]:
+        employees = int(self._redis_connection.get(f"company:{company_id}:employees"))
+        vacancies = int(self._redis_connection.get(f"company:{company_id}:vacancies"))
+        return {"employees": employees, "open_vacancies": vacancies}
 
     def _get_company_from_cache(self, company_id: int) -> (Company | None):
         return self._companies.get(company_id)

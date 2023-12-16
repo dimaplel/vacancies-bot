@@ -2,6 +2,9 @@ import logging
 import asyncio
 import sys
 
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logging.getLogger().setLevel(logging.INFO)
+
 from aiogram import Bot, Dispatcher
 
 from routers.entry_router import entry_router
@@ -19,6 +22,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    logging.getLogger().setLevel(logging.INFO)
     asyncio.run(main())

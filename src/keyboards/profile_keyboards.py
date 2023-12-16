@@ -18,6 +18,7 @@ class UserProfileKeyboardMarkup(SweetKeyboardMarkup):
 
 class SeekerProfileKeyboardMarkup(SweetKeyboardMarkup):
     def __init__(self):
+        super().__init__()
         self._keyboard_buttons: dict[str, KeyboardButton] = {
             "edit_portfolio_button" : KeyboardButton(text="Edit Portfolio"),
             "search_vacancies_button" : KeyboardButton(text="Search Vacancies")
@@ -27,6 +28,7 @@ class SeekerProfileKeyboardMarkup(SweetKeyboardMarkup):
 
 class RecruiterProfileKeyboardMarkup(SweetKeyboardMarkup):
     def __init__(self):
+        super().__init__()
         self._keyboard_buttons: dict[str, KeyboardButton] = {
             "add_vacancy_button" : KeyboardButton(text="Add Vacancy"),
             "your_vacancies_button" : KeyboardButton(text="Your Vacancies"),

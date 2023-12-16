@@ -106,12 +106,13 @@ class Neo4jConnection:
                 driver.verify_connectivity()
                 self._driver = driver
                 logging.info("Successfully connected to the Neo4j database.")
-                return
+                return True
             except Exception as e:
                 logging.error(f"Connection failed: {e}")
                 time.sleep(5)  # Wait for 5 seconds before retrying
 
         logging.error("Failed to connect to the Neo4j database within the timeout period.")
+        return False
 
 
     def open(self):

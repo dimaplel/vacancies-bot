@@ -43,7 +43,7 @@ class SweetConnections:
             self.neo4j_connection.open()
             self._sql_db_init()
         except Exception as _:
-            logging.warn("Failed to open some database connections")
+            logging.warning("Failed to open some database connections")
             return
             
 
@@ -85,6 +85,8 @@ sweet_connections = SweetConnections()
 class ProfileHome:
     def __init__(self, sweet_connections: SweetConnections):
         self._sweet_connections = sweet_connections
+        self._company_registry = CompanyRegistry(self._sweet_connections.sql_connection,
+                                                 self._sweet_connections.redis_connection)
 
 
     def request_seeker_profile(self, user_profile: UserProfile) -> bool:
@@ -101,16 +103,23 @@ class ProfileHome:
 
     
     def request_recruiter_profile(self, user_profile: UserProfile) -> bool:
-        return user_profile.request_recruiter_profile(self._sql_connection)
+        return user_profile.request_recruiter_profile(self._sweet_connections.sql_connection)
 
     
-    def add_recruiter_proifle(self, user_profile: UserProfile, company_id: int):
+    def add_recruiter_profile(self, user_profile: UserProfile, company_id: int):
         user_profile.add_recruiter_profile(
             company_id,
-            self._neo4j_connection,
-            self._sql_connection
+            self._sweet_connections.neo4j_connection,
+            self._sweet_connections.sql_connection
         )
 
+
+    def search_company_by_name(self, company_name: str):
+        return self._company_registry.search_by_name(company_name)
+
+
+    def get_company_metrics(self, company_id: int):
+        return self._company_registry.get_metrics(company_id)
 
  
 class SeekerHome:
@@ -123,11 +132,16 @@ class SeekerHome:
         return seeker_profile.get_portfolio(self._sweet_connections.mongodb_connection)
 
 
+class RecruiterHome:
+    def __init__(self, sweet_connections: SweetConnections):
+        self._sweet_connections = sweet_connections
+
+
+
 class SweetHome:
     def __init__(self, sweet_connections: SweetConnections) -> None:
         self._sweet_connections = sweet_connections
         self._user_cache: Dict[int, UserProfile] = {}
-        self._company_registry = CompanyRegistry(self._sweet_connections.sql_connection)
         self.seeker_home = SeekerHome(sweet_connections)
         self.profile_home = ProfileHome(sweet_connections)
 
