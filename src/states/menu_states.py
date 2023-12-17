@@ -2,4 +2,7 @@ from aiogram.filters.state import State, StatesGroup
 
 
 class MenuStates(StatesGroup):
-    options_handle = State()
+    profile_home = State()
+    seeker_home = State()
+    recruiter_home = State()
+    seeker_profile_editting = State()

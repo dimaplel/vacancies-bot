@@ -93,4 +93,7 @@ class CompaniesChoiceInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
                 self._companies[self._get_lower_limit(): self._get_upper_limit()],
         start=self._get_lower_limit()):
             self._keyboard_buttons.get("companies").append(InlineKeyboardButton(text=c.name, callback_data=str(i)))
+            
+
+
 

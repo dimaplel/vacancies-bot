@@ -36,7 +36,7 @@ class UserProfile:
         assert not self.request_seeker_profile(psql_connection)
         user_id = self.get_id()
         portfolio_ref = mongodb_connection.insert_document("portfolios", portfolio)
-        result = neo4j_connection.run_query("CREATE (s:Seeker {user_id: $user_id}) RETURN ID(s) AS seeker_id",
+        result = neo4j_connection.run_query("MERGE (s:Seeker {user_id: $user_id}) RETURN ID(s) AS seeker_id",
                                             {"user_id": user_id})
         if len(result) != 1:
             logging.error("Error while adding seeker to the neo4j graph")
@@ -54,7 +54,7 @@ class UserProfile:
         """
         assert not self.request_recruiter_profile(psql_connection)
         user_id = self.get_id()
-        result = neo4j_connection.run_query("CREATE (r:Recruiter {user_id: $user_id}) RETURN ID(r) AS recruiter_id",
+        result = neo4j_connection.run_query("MERGE (r:Recruiter {user_id: $user_id}) RETURN ID(r) AS recruiter_id",
                                             {"user_id": user_id})
         if len(result) != 1:
             logging.error("Error while adding recruiter to the neo4j graph")

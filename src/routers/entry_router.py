@@ -20,7 +20,7 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
     if user_profile is not None:
         markup = user_profile.user_markup.get_current_markup()
         await message.answer("Welcome back! Choose from one of the options below.", reply_markup=markup)
-        await state.set_state(MenuStates.options_handle)
+        await state.set_state(MenuStates.profile_home)
         return
     
     await message.answer(f"Welcome to the Vacancies Bot 👨‍💻\n\n"
@@ -45,4 +45,4 @@ async def enter_last_name(message: Message, state: FSMContext) -> None:
     await message.answer("Your profile has been successfully registered! Choose from one of the options below.",
                          reply_markup=user_profile.user_markup.get_current_markup())
     await state.set_data({"profile": user_profile})
-    await state.set_state(MenuStates.options_handle)
+    await state.set_state(MenuStates.profile_home)

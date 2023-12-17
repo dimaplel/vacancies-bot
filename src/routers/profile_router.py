@@ -6,6 +6,8 @@ from aiogram.utils.formatting import Italic, Bold
 
 from src.sweet_home import sweet_home
 from src.users.user_profile import UserProfile
+from src.users.seeker_profile import SeekerProfile
+from src.users.recruiter_profile import RecruiterProfile
 from src.users.company import Company
 from src.keyboards.recruiter_inline_keyboards import (NoExperienceInlineKeyboardMarkup,
                                                       PortfolioAdditionInlineKeyboardMarkup,
@@ -19,9 +21,12 @@ profile_router = Router(name="Profile Router")
 
 
 # Handle options from profile menu
-@profile_router.message(F.text, MenuStates.options_handle)
-async def register_seeker(message: types.Message, state: FSMContext):
-    user_profile: UserProfile = sweet_home.request_user_profile(message.from_user.id)
+@profile_router.message(F.text, MenuStates.profile_home)
+async def profile_home(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    assert user_profile is not None
+    
     user_markup = user_profile.user_markup
     if message.text == user_markup.get_button_text("seeker_button"):
         if not sweet_home.profile_home.request_seeker_profile(user_profile):
@@ -30,9 +35,14 @@ async def register_seeker(message: types.Message, state: FSMContext):
                                 "Enter the position you would like to apply for.",
                                 reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
             await state.set_state(SeekerRegistrationStates.position)
-        else:
-            # TODO: Implement logic for existing seeker profile
-            pass
+        else: # We have seeker profile - proceed to seeker home menu
+            seeker_profile: SeekerProfile = user_profile.seeker_ref
+            assert seeker_profile is not None
+            
+            await state.set_state(MenuStates.seeker_home)
+            await message.answer(f"Successfully entered your seeker profile, {user_profile.first_name}\n"
+                "Select an action from the menu below", 
+                reply_markup=seeker_profile.seeker_markup.get_current_markup())
 
     elif message.text == user_markup.get_button_text("recruiter_button"):
         if not sweet_home.profile_home.request_recruiter_profile(user_profile):
@@ -42,13 +52,18 @@ async def register_seeker(message: types.Message, state: FSMContext):
                                 reply_markup=types.reply_keyboard_remove.ReplyKeyboardRemove())
             await state.set_state(RecruiterRegistrationStates.enter_company)
 
-        else:
-            # TODO: Implement logic for existing recruiter profile
-            pass
+        else: # We have recruiter profile - proceed to recruiter home menu
+            recruiter_profile: RecruiterProfile = user_profile.recruiter_ref
+            assert recruiter_profile is not None
+            
+            await state.set_state(MenuStates.recruiter_home)
+            await message.answer(f"Successfully entered your recruiter profile, {user_profile.first_name}\n" 
+                "Select an action from the menu below", 
+                reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
 
     elif message.text == user_markup.get_button_text("edit_profile_button"):
-        # Do profile editing logic
-        pass
+        # TODO: do profile editing logic
+        await message.answer("NOIMPL", reply_markup=user_markup.get_current_markup())
 
 
 @profile_router.message(F.text, SeekerRegistrationStates.position)
@@ -143,7 +158,7 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
                               reply_markup=user_profile.user_markup.get_current_markup())
     await call.message.delete()
     await state.set_data({})
-    await state.set_state(state=MenuStates.options_handle)
+    await state.set_state(state=MenuStates.profile_home)
 
 
 @profile_router.callback_query(F.data == "add-exp", SeekerRegistrationStates.confirm_or_add_portfolio)
@@ -207,7 +222,7 @@ async def finalize_seeker_registration(message: types.Message, state: FSMContext
                          f"{Italic('You may now access the recruiter profile!').as_html()}",
                          parse_mode='HTML', reply_markup=user_profile.user_markup.get_current_markup())
     await state.set_data({})
-    await state.set_state(MenuStates.options_handle)
+    await state.set_state(MenuStates.profile_home)
 
 
 @profile_router.callback_query(RecruiterRegistrationStates.choose_company)
@@ -232,7 +247,7 @@ async def handle_company_callback(call: types.CallbackQuery, state: FSMContext):
                                      f"{Italic('You may now access recruiter menu!').as_html()}",
                                      parse_mode='HTML', reply_markup=user_profile.user_markup.get_current_markup())
         await call.message.delete()
-        await state.set_state(MenuStates.options_handle)
+        await state.set_state(MenuStates.profile_home)
         return
 
     await call.message.edit_reply_markup(call.inline_message_id, reply_markup=keyboard.get_current_markup())

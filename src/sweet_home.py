@@ -131,6 +131,10 @@ class SeekerHome:
     def __init__(self, sweet_connections: SweetConnections):
         self._sweet_connections = sweet_connections
 
+
+    def request_seeker_profile(self, user_profile: UserProfile) -> bool:
+        return user_profile.request_seeker_profile(self._sweet_connections.sql_connection)
+
     
     def request_seeker_portfolio(self, seeker_profile: SeekerProfile):
         # TODO: Add more checks (If portfolio is None?)
