@@ -26,8 +26,8 @@ class SearchOrRegisterInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
-            "add_experience_button": InlineKeyboardButton(text="Register new company 🏢", callback_data="company-reg"),
-            "confirm_experience_button": InlineKeyboardButton(text="Try again 🔁", callback_data="search-again")
+            "register_button": InlineKeyboardButton(text="Register new company 🏢", callback_data="company-reg"),
+            "retry_button": InlineKeyboardButton(text="Try again 🔁", callback_data="search-again")
         }
         self.update_keyboard(2)
 
@@ -50,7 +50,7 @@ class CompaniesChoiceInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
 
 
     def update_keyboard(self) -> InlineKeyboardMarkup:
-        companies_buttons = [button for _, button in
+        companies_buttons = [button for button in
                              self._keyboard_buttons.get("companies")[
                              self._get_lower_limit(): self._get_upper_limit()]
                              ]
@@ -73,6 +73,9 @@ class CompaniesChoiceInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         return self.get_current_markup()
 
 
+    def get_companies(self):
+        return self._companies
+
     def flip_page(self, is_next: bool):
         self._page_number += 1 if is_next else -1
         self.update_keyboard()
@@ -90,3 +93,4 @@ class CompaniesChoiceInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
                 self._companies[self._get_lower_limit(): self._get_upper_limit()],
         start=self._get_lower_limit()):
             self._keyboard_buttons.get("companies").append(InlineKeyboardButton(text=c.name, callback_data=str(i)))
+

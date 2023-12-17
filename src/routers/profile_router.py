@@ -126,7 +126,7 @@ async def add_experience_timeline(message: types.Message, state: FSMContext):
 @profile_router.callback_query(F.data == "conf-exp", SeekerRegistrationStates.confirm_or_add_portfolio)
 async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    user_profile: UserProfile = data["profile"]
+    user_profile: UserProfile = sweet_home.request_user_profile(call.from_user.id)
     portfolio = {"position": data.get("position"), "experiences": data.get("experiences")}
     sweet_home.profile_home.add_seeker_profile(user_profile, portfolio)
     experiences_text = ""
@@ -134,7 +134,6 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
                              f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
                              f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
-
     await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
                               f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" 
@@ -143,6 +142,7 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
                               parse_mode="HTML",
                               reply_markup=user_profile.user_markup.get_current_markup())
     await call.message.delete()
+    await state.set_data({})
     await state.set_state(state=MenuStates.options_handle)
 
 
@@ -158,31 +158,59 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
 @profile_router.message(F.text, RecruiterRegistrationStates.enter_company)
 async def search_for_company(message: types.Message, state: FSMContext):
     result = sweet_home.profile_home.search_company_by_name(message.text)
-    await state.update_data(company_name=message.text)
+    await state.update_data(company_name=message.text.strip())
     if result is None:
-        await message.answer("Hmmm, we didn't find your company in registered ones. "
-                             "Would you like to register your company or try another name?",
+        await message.answer(f"Hmmm, we didn't find your company in registered ones. "
+                             f"Would you like to register company with name {message.text.strip()} or try another name?",
                              reply_markup=SearchOrRegisterInlineKeyboardMarkup().get_current_markup())
         await state.set_state(RecruiterRegistrationStates.register_or_retry)
         return
 
-    if len(result) > 5:
-        await state.update_data(page=0)
-
     keyboard = CompaniesChoiceInlineKeyboardMarkup(result)
-    await state.update_data(companies=result, keyboard=keyboard)
+    await state.update_data(keyboard=keyboard)
     await message.answer("Select the company from the list below or register a new one.",
                          reply_markup=keyboard.get_current_markup())
-    await state.set_state(RecruiterRegistrationStates.enter_company)
+    await state.set_state(RecruiterRegistrationStates.choose_company)
 
 
-@profile_router.callback_query(F.data == "search-again", RecruiterRegistrationStates.register_or_retry)
+@profile_router.callback_query(F.data == SearchOrRegisterInlineKeyboardMarkup().get_button_data("retry_button"),
+                               RecruiterRegistrationStates.register_or_retry)
 async def retry_search(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_text("OK, let's try again: Enter the name of your company and we will search for it.")
     await state.set_state(RecruiterRegistrationStates.enter_company)
 
 
-@profile_router.callback_query(RecruiterRegistrationStates.enter_company)
+@profile_router.callback_query(F.data == SearchOrRegisterInlineKeyboardMarkup().get_button_data("register_button"),
+                               RecruiterRegistrationStates.register_or_retry)
+async def register_company(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    try:
+        data.pop("keyboard")
+    except KeyError:
+        pass
+
+    await call.message.edit_text(f"Awesome, let's register company '{data.get('company_name')}'.\n"
+                                 f"Enter how many employees it currently has.")
+    await state.set_state(RecruiterRegistrationStates.register_company)
+
+
+@profile_router.message(F.text.regexp(r'^[1-9]\d*$'), RecruiterRegistrationStates.register_company)
+async def finalize_seeker_registration(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    employees_count = int(message.text)
+    user_profile = sweet_home.request_user_profile(message.from_user.id)
+    company_ref = sweet_home.profile_home.add_company(data["company_name"], employees_count)
+    sweet_home.profile_home.add_recruiter_profile(user_profile, company_ref.get_id())
+    await message.answer("Your recruiter profile was successfully registered, with the following company association:\n\n"
+                         f"{Bold('— Company name:').as_html()} {company_ref.name}\n"
+                         f"{Bold('— Employees count:').as_html()} {company_ref.metrics.num_employees}\n\n"
+                         f"{Italic('You may now access the recruiter profile!').as_html()}",
+                         parse_mode='HTML', reply_markup=user_profile.user_markup.get_current_markup())
+    await state.set_data({})
+    await state.set_state(MenuStates.options_handle)
+
+
+@profile_router.callback_query(RecruiterRegistrationStates.choose_company)
 async def handle_company_callback(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     keyboard: CompaniesChoiceInlineKeyboardMarkup = data.get("keyboard")
@@ -190,20 +218,21 @@ async def handle_company_callback(call: types.CallbackQuery, state: FSMContext):
         keyboard.flip_page(is_next=False)
     elif call.data == keyboard.get_button_data("next_button"):
         keyboard.flip_page(is_next=True)
-
-    elif call.data == keyboard.get_button_data("registration_button"):
-        # TODO: set company registration state, edit message
-        pass
+    elif call.data == SearchOrRegisterInlineKeyboardMarkup().get_button_data("register_button"):
+        await register_company(call, state)
+        return
     elif call.data.isdigit():
-        chosen_company: Company = data.get("companies")[int(call.data)]
+        chosen_company: Company = keyboard.get_companies()[int(call.data)]
         company_metrics = sweet_home.profile_home.get_company_metrics(chosen_company.get_id())
         user_profile: UserProfile = sweet_home.request_user_profile(call.from_user.id)
         sweet_home.profile_home.add_recruiter_profile(user_profile, chosen_company.get_id())
-        await call.message.edit_text(f"You chose company {chosen_company.name} with following stats:\n\n"
+        await call.message.answer(f"You chose company {chosen_company.name} with following stats:\n\n"
                                      f"{Bold('— Employees count:').as_html()} {company_metrics.get('employees')}\n"
                                      f"{Bold('— Open vacancies:').as_html()} {company_metrics.get('open_vacancies')}\n\n"
                                      f"{Italic('You may now access recruiter menu!').as_html()}",
                                      parse_mode='HTML', reply_markup=user_profile.user_markup.get_current_markup())
+        await call.message.delete()
         await state.set_state(MenuStates.options_handle)
+        return
 
     await call.message.edit_reply_markup(call.inline_message_id, reply_markup=keyboard.get_current_markup())

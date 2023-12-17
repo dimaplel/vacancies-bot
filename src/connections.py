@@ -140,16 +140,15 @@ class Neo4jConnection:
 
 
 class RedisConnection:
-    def __init__(self, host: str, user: str, pswd: str):
+    def __init__(self, host: str, pswd: str):
         self.host = host
-        self.user = user
         self.password = pswd
         self.conn: Optional[redis.Redis] = None
 
     def open(self):
         try:
-            logging.info(f"Opening Redis connection for username {self.user}")
-            self.connection = redis.Redis(host=self.host, username=self.user, password=self.password)
+            logging.info(f"Opening Redis connection for host {self.host}")
+            self.connection = redis.Redis(host=self.host, password=self.password)
         except Exception as e:
             logging.error("Error while opening connection in %s: %s" % (self.__class__.__name__, e))
 

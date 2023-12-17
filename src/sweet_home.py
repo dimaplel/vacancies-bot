@@ -20,7 +20,6 @@ class SweetConnections:
         )
         self.redis_connection = RedisConnection(
             cfg.redis_host,
-            cfg.redis_username,
             cfg.redis_password.get_secret_value()
         )
         self.mongodb_connection = MongoDBConnection(
@@ -74,9 +73,8 @@ class SweetConnections:
 
         self.sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS companies (
-                company_id SERIAL PRIMARY KEY, 
-                name VARCHAR(255), 
-                website VARCHAR(255))""")
+                company_id INT PRIMARY KEY, 
+                name VARCHAR(255))""")
 
 
 sweet_connections = SweetConnections()
@@ -100,6 +98,10 @@ class ProfileHome:
             self._sweet_connections.neo4j_connection, 
             self._sweet_connections.sql_connection
         )
+
+
+    def add_company(self, company_name: str, company_employees: int, company_vacancies: int = 0):
+        return self._company_registry.add_company(company_name, company_employees, company_vacancies)
 
     
     def request_recruiter_profile(self, user_profile: UserProfile) -> bool:

@@ -18,3 +18,4 @@ class RecruiterRegistrationStates(StatesGroup):
     enter_company = State()
     register_or_retry = State()
     choose_company = State()
+    register_company = State()

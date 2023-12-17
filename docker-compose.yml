@@ -23,10 +23,13 @@ services:
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
     volumes:
       - redis_data:/data
     environment:
-      USERNAME: ${REDIS_USERNAME}
       PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "6379:6379"

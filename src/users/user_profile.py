@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
-from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection
+from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection, RedisConnection
 from src.keyboards.profile_keyboards import UserProfileKeyboardMarkup
 
 @dataclass
@@ -54,7 +54,7 @@ class UserProfile:
         """
         assert not self.request_recruiter_profile(psql_connection)
         user_id = self.get_id()
-        result = neo4j_connection.run_query("CREATE (r:Recruiter {user_id: $user_id}) RETURN ID(s) AS recruiter_id",
+        result = neo4j_connection.run_query("CREATE (r:Recruiter {user_id: $user_id}) RETURN ID(r) AS recruiter_id",
                                             {"user_id": user_id})
         if len(result) != 1:
             logging.error("Error while adding recruiter to the neo4j graph")

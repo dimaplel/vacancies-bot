@@ -21,7 +21,6 @@ async def entry_handler(message: Message, state: FSMContext) -> None:
         markup = user_profile.user_markup.get_current_markup()
         await message.answer("Welcome back! Choose from one of the options below.", reply_markup=markup)
         await state.set_state(MenuStates.options_handle)
-        await state.set_data({"profile": user_profile})
         return
     
     await message.answer(f"Welcome to the Vacancies Bot 👨‍💻\n\n"

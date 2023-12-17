@@ -12,9 +12,18 @@ class CompanyMetrics:
 
     # Returns True if update was successful, False if failed to query any of the metrics 
     def update(self, redis_connection: RedisConnection) -> bool:
-        self.num_employees = redis_connection.get(self._employees_ref)
-        self.num_vacancies = redis_connection.get(self._vacancies_ref)
-        return (self.num_employees is not None and self.num_vacancies is not None)
+        try:
+            self.num_employees = int(redis_connection.get(self._employees_ref))
+            self.num_vacancies = int(redis_connection.get(self._vacancies_ref))
+        except TypeError:
+            return False
+        return True
+
+
+    def create_metrics(self, redis_connection: RedisConnection, employees_count: int, vacancies_count: int) -> None:
+        redis_connection.set(self._employees_ref, employees_count)
+        redis_connection.set(self._vacancies_ref, vacancies_count)
+        self.update(redis_connection)
 
 
 class Company:
