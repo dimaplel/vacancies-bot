@@ -16,7 +16,7 @@ class UserProfile:
     user_markup = UserProfileKeyboardMarkup()
 
 
-    def get_full_name(self):
+    def get_full_name(self) -> str:
         return self.first_name + " " + self.last_name
 
 

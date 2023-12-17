@@ -153,7 +153,7 @@ class RedisConnection:
         except Exception as e:
             logging.error("Error while closing connection in %s: %s" % (self.__class__.__name__, e))
 
-    def get(self, key: str) -> Union[str, bytes, None]:
+    def get(self, key: str) -> (str | bytes | None):
         try:
             value = self.connection.get(key)
             logging.info(f"Retrieved value for {key} from Redis: {value}")
@@ -162,7 +162,7 @@ class RedisConnection:
             logging.error(f"Error getting value for {key} from Redis: {e}")
             return None
 
-    def set(self, key: str, value: Union[str, bytes, int, float]):
+    def set(self, key: str, value: (str | bytes | int | float)):
         try:
             self.connection.set(key, value)
             logging.info(f"Set {key} to {value} in Redis")
@@ -202,7 +202,7 @@ class MongoDBConnection:
         try:
             collection = self.db[collection_name]
             result = collection.insert_one(document)
-            print(f"Inserted document with ID: {result.inserted_id}")
+            logging.info(f"Inserted document with ID: {result.inserted_id}")
             return str(result.inserted_id)
         except Exception as e:
             logging.error(f"Error inserting document into MongoDB: {e}")

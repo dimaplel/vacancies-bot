@@ -150,7 +150,7 @@ class RecruiterHome:
 class SweetHome:
     def __init__(self, sweet_connections: SweetConnections) -> None:
         self._sweet_connections = sweet_connections
-        self._user_cache: Dict[int, UserProfile] = {}
+        self._user_cache: dict[int, UserProfile] = {}
         self.seeker_home = SeekerHome(sweet_connections)
         self.profile_home = ProfileHome(sweet_connections)
 

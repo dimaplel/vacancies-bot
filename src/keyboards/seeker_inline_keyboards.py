@@ -2,7 +2,7 @@ from src.keyboards.inline_keyboard_markup import SweetInlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-class SeekerPortfolioEdittingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+class SeekerPortfolioEditingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {

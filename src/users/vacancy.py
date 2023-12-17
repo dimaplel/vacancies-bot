@@ -13,5 +13,5 @@ class Vacancy:
 
 
     def get_json_document(self, mongodb_connection: MongoDBConnection) -> (Dict[str, Any] | None):
-        return mongodb_connection.get_document("vacancies", self._vacancy_id)
+        return mongodb_connection.get_document("vacancies", str(self._vacancy_id))
     

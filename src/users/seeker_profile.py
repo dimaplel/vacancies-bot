@@ -19,7 +19,7 @@ class SeekerProfile:
 
     # Queries mongodb connection for JSON document referenced by self._portfolio_ref
     # Returns the JSON document if any exists
-    def get_portfolio(self, mongodb_connection: MongoDBConnection) -> (Dict[str, Any] | None):
+    def get_portfolio(self, mongodb_connection: MongoDBConnection) -> (dict[str, Any] | None):
         doc = mongodb_connection.get_document("portfolios", self._portfolio_ref)
         return doc
 
