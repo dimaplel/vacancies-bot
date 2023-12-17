@@ -40,10 +40,7 @@ class PsqlConnection:
             logging.error("Error while closing connection in %s: %s" % (self.__class__.__name__, e))
             
 
-    def execute_query(self, query: str, *args) -> (list[RealDictRow] | bool | None):
-        """
-        Returns False if failed to execute a query
-        """
+    def execute_query(self, query: str, *args) -> (list[RealDictRow] | None):
         if self.cur is not None:
             try:
                 self.cur.execute(query, args)
@@ -58,13 +55,10 @@ class PsqlConnection:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
             logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
-            return False
+            return None
 
 
-    def execute_query_fetchone(self, query: str, *args) -> (RealDictRow | bool | None):
-        """
-        Returns False if failed to execute a query
-        """
+    def execute_query_fetchone(self, query: str, *args) -> (RealDictRow | None):
         if self.cur is not None:
             try:
                 self.cur.execute(query, args)
@@ -79,7 +73,7 @@ class PsqlConnection:
                 logging.error(f"Error while executing query {query} in {self.__class__.__name__}: {e}")
         else:
             logging.warning("PsqlDatabase failed to execute query on %s" % self.name)
-            return False
+            return None
 
 
 class Neo4jConnection:

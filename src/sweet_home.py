@@ -53,6 +53,18 @@ class SweetConnections:
                 first_name VARCHAR(255), 
                 last_name VARCHAR(255))""")
 
+        # They should be created before because of the relationships between tables
+        # For instance recruiter_profiles need companies table to exist 
+        self.sql_connection.execute_query(f"""
+            CREATE TABLE IF NOT EXISTS vacancies (
+                recruiter_id BIGINT, 
+                vacancy_doc_ref VARCHAR(255))""")
+
+        self.sql_connection.execute_query(f"""
+            CREATE TABLE IF NOT EXISTS companies (
+                company_id SERIAL PRIMARY KEY, 
+                name VARCHAR(255))""")
+
         self.sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS seeker_profiles (
                 user_id BIGINT PRIMARY KEY, 
@@ -66,15 +78,6 @@ class SweetConnections:
                 company_id INT,
                 FOREIGN KEY (company_id) REFERENCES companies(company_id))""")
 
-        self.sql_connection.execute_query(f"""
-            CREATE TABLE IF NOT EXISTS vacancies (
-                recruiter_id BIGINT, 
-                vacancy_doc_ref VARCHAR(255))""")
-
-        self.sql_connection.execute_query(f"""
-            CREATE TABLE IF NOT EXISTS companies (
-                company_id INT PRIMARY KEY, 
-                name VARCHAR(255))""")
 
 
 sweet_connections = SweetConnections()
@@ -155,13 +158,11 @@ class SweetHome:
         if user_profile is not None:
             return user_profile
 
-        queryResult = self._sweet_connections.sql_connection.execute_query(f"SELECT * FROM user_profiles WHERE user_id = {user_id}")
-        if queryResult is None:
+        row = self._sweet_connections.sql_connection.execute_query_fetchone(
+            f"SELECT * FROM user_profiles WHERE user_id = {user_id}")
+        if row is None:
             return None
 
-        # We should always assume there is only 1 result for any user_id we provided
-        assert len(queryResult) == 1
-        row = queryResult[0]
         first_name = row['first_name']
         last_name = row['last_name']
         # We do not specify seeker_profile and recruiter_profile here. Those will be set explicitly
