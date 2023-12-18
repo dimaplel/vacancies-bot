@@ -9,10 +9,8 @@ from src.users.user_profile import UserProfile
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
 from src.users.company import Company
-from src.keyboards.recruiter_inline_keyboards import (NoExperienceInlineKeyboardMarkup,
-                                                      PortfolioAdditionInlineKeyboardMarkup,
-                                                      SearchOrRegisterInlineKeyboardMarkup,
-                                                      CompaniesChoiceInlineKeyboardMarkup)
+from src.keyboards.seeker_inline_keyboards import NoExperienceInlineKeyboardMarkup, PortfolioAdditionInlineKeyboardMarkup
+from src.keyboards.recruiter_inline_keyboards import SearchOrRegisterInlineKeyboardMarkup, CompaniesChoiceInlineKeyboardMarkup
 from src.states.registration_states import SeekerRegistrationStates, RecruiterRegistrationStates
 from src.states.menu_states import MenuStates
 

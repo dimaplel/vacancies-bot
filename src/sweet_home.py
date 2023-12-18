@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict
+from typing import Dict, Any
 
 from config import cfg
 from connections import PsqlConnection, Neo4jConnection, RedisConnection, MongoDBConnection
@@ -139,6 +139,10 @@ class SeekerHome:
     def request_seeker_portfolio(self, seeker_profile: SeekerProfile):
         # TODO: Add more checks (If portfolio is None?)
         return seeker_profile.get_portfolio(self._sweet_connections.mongodb_connection)
+
+
+    def update_seeker_portfolio(self, seeker_profile: SeekerProfile, portfolio: Dict[str, Any]) -> bool:
+        return seeker_profile.update_portfolio(self._sweet_connections.mongodb_connection, portfolio)
 
 
 class RecruiterHome:

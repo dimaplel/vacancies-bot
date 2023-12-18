@@ -14,6 +14,14 @@ class SeekerRegistrationStates(StatesGroup):
     confirm_or_add_portfolio = State()
 
 
+class SeekerPortfolioUpdateStates(StatesGroup):
+    position = State()
+    experience_title = State()
+    experience_desc = State()
+    experience_timeline = State()
+    confirm_or_add_portfolio = State()
+
+
 class RecruiterRegistrationStates(StatesGroup):
     enter_company = State()
     register_or_retry = State()
