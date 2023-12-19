@@ -213,7 +213,6 @@ class MongoDBConnection:
     def get_document(self, collection_name: str, doc_id: str) -> (Dict[str, Any] | None):
         try:
             collection = self.db[collection_name]
-            logging.info("Working with collection: " + collection_name)
             document = collection.find_one({"_id": ObjectId(doc_id)})
             if document:
                 print(f"Retrieved document with ID {doc_id} from MongoDB: {document}")
