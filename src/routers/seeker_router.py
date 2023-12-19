@@ -28,9 +28,8 @@ async def seeker_home(message: types.Message, state: FSMContext):
     
     seeker_markup = seeker_profile.seeker_markup
     if message.text == seeker_markup.get_button_text("edit_portfolio_button"):
-        # TODO: Handle portfolio editing logic
         await message.answer("You are about to update your portfolio "
-            "(This will discard your current data and set a new one in its place)",
+            "(This will discard your current data and set a new one in its place).",
                              reply_markup=SeekerPortfolioEditingInlineKeyboardMarkup().get_current_markup())
         await state.set_state(MenuStates.seeker_profile_editing)
 
@@ -96,7 +95,7 @@ async def on_portfolio_position_message(message: types.Message, state: FSMContex
                          f"Enter your experience title {Italic('For instance: Developer at ABC Inc.').as_html()} "
                          f"if you have one or press the button below.",
                          parse_mode="HTML", reply_markup=NoExperienceInlineKeyboardMarkup().get_current_markup())
-    state.set_state(SeekerPortfolioUpdateStates.experience_title)
+    await state.set_state(SeekerPortfolioUpdateStates.experience_title)
 
 
 @seeker_router.callback_query(F.data == "no-exp", SeekerPortfolioUpdateStates.experience_title)
@@ -183,11 +182,10 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
                              f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
                              f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
-    await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
+    await call.message.answer(f"{Bold('You have successfully updated your portfolio.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
-                              f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" 
-                              f"{Bold('— Portfolio: ').as_html()}\n\n{experiences_text}" +
-                              Italic("You may now access seeker menu!").as_html(),
+                              f"{Bold('— Desired position:').as_html()} {portfolio_ref['position']}\n\n" 
+                              f"{Bold('— Portfolio: ').as_html()}\n\n{experiences_text}",
                               parse_mode="HTML",
                               reply_markup=user_profile.user_markup.get_current_markup())
 

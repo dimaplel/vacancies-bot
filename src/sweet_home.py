@@ -126,7 +126,11 @@ class ProfileHome:
     def get_company_metrics(self, company_id: int):
         return self._company_registry.get_metrics(company_id)
 
- 
+
+    def edit_user_profile(self, user_profile: UserProfile, first_name: str, last_name: str):
+        user_profile.update(self._sweet_connections.sql_connection, first_name, last_name)
+
+
 class SeekerHome:
     def __init__(self, sweet_connections: SweetConnections):
         self._sweet_connections = sweet_connections

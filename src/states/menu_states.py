@@ -6,3 +6,4 @@ class MenuStates(StatesGroup):
     seeker_home = State()
     seeker_profile_editing = State()
     recruiter_home = State()
+    user_profile_editing = State()

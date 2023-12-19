@@ -5,6 +5,7 @@ from typing import Optional, Union, Dict, Any
 import neo4j
 import psycopg2
 import pymongo
+from bson import ObjectId
 import redis
 from psycopg2.extras import RealDictCursor, RealDictRow
 from pymongo.collection import Collection
@@ -212,7 +213,8 @@ class MongoDBConnection:
     def get_document(self, collection_name: str, doc_id: str) -> (Dict[str, Any] | None):
         try:
             collection = self.db[collection_name]
-            document = collection.find_one({"_id": doc_id})
+            logging.info("Working with collection: " + collection_name)
+            document = collection.find_one({"_id": ObjectId(doc_id)})
             if document:
                 print(f"Retrieved document with ID {doc_id} from MongoDB: {document}")
             return document
@@ -223,7 +225,7 @@ class MongoDBConnection:
 
     def update_document(self, collection_name: str, doc_id: str, document: Dict[str, Any]) -> bool:
         collection: Collection = self.db[collection_name]
-        filter_condition = {"_id": doc_id}
+        filter_condition = {"_id": ObjectId(doc_id)}
         result = collection.update_one(filter=filter_condition, update={"$set": document})
         return True if (result.acknowledged 
             and result.matched_count > 0 

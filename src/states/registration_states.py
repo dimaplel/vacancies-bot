@@ -6,6 +6,11 @@ class EntryRegistrationStates(StatesGroup):
     last_name = State()
 
 
+class UserProfileUpdateStates(StatesGroup):
+    first_name = State()
+    last_name = State()
+
+
 class SeekerRegistrationStates(StatesGroup):
     position = State()
     experience_title = State()

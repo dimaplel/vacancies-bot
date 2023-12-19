@@ -18,7 +18,7 @@ services:
     env_file:
       - ./.env
     volumes:
-      - mongodata:/data
+      - ./mongodata:/data
 
   redis:
     image: redis:7.2-alpine

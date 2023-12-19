@@ -9,9 +9,13 @@ from src.users.user_profile import UserProfile
 from src.users.seeker_profile import SeekerProfile
 from src.users.recruiter_profile import RecruiterProfile
 from src.users.company import Company
-from src.keyboards.seeker_inline_keyboards import NoExperienceInlineKeyboardMarkup, PortfolioAdditionInlineKeyboardMarkup
-from src.keyboards.recruiter_inline_keyboards import SearchOrRegisterInlineKeyboardMarkup, CompaniesChoiceInlineKeyboardMarkup
-from src.states.registration_states import SeekerRegistrationStates, RecruiterRegistrationStates
+from src.keyboards.seeker_inline_keyboards import (NoExperienceInlineKeyboardMarkup,
+                                                   PortfolioAdditionInlineKeyboardMarkup)
+from src.keyboards.recruiter_inline_keyboards import (SearchOrRegisterInlineKeyboardMarkup,
+                                                      CompaniesChoiceInlineKeyboardMarkup)
+from src.keyboards.profile_inline_keyboards import UserProfileEditingInlineKeyboardMarkup
+from src.states.registration_states import (SeekerRegistrationStates,
+                                            RecruiterRegistrationStates, UserProfileUpdateStates)
 from src.states.menu_states import MenuStates
 
 
@@ -61,7 +65,11 @@ async def profile_home(message: types.Message, state: FSMContext):
 
     elif message.text == user_markup.get_button_text("edit_profile_button"):
         # TODO: do profile editing logic
-        await message.answer("NOIMPL", reply_markup=user_markup.get_current_markup())
+        # await message.answer("NOIMPL", reply_markup=user_markup.get_current_markup())
+        await message.answer("You are about to edit your profile "
+                             "(This will discard your current profile and you will create a new one).",
+                             reply_markup=UserProfileEditingInlineKeyboardMarkup().get_current_markup())
+        await state.set_state(MenuStates.user_profile_editing)
 
 
 @profile_router.message(F.text, SeekerRegistrationStates.position)
@@ -249,3 +257,49 @@ async def handle_company_callback(call: types.CallbackQuery, state: FSMContext):
         return
 
     await call.message.edit_reply_markup(call.inline_message_id, reply_markup=keyboard.get_current_markup())
+
+
+@profile_router.callback_query(F.data == "profile", MenuStates.user_profile_editing)
+async def on_profile_edit(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer("Let's start with your first name, enter it.")
+    await call.message.delete()
+
+    await state.set_data({})
+    await state.set_state(UserProfileUpdateStates.first_name)
+
+
+@profile_router.callback_query(F.data == "back", MenuStates.user_profile_editing)
+async def on_back(call: types.CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    assert user_profile is not None
+
+    await call.message.answer(f"Returning back to main menu.",
+                              reply_markup=user_profile.user_markup.get_current_markup())
+    await call.message.delete()
+    await state.set_state(MenuStates.profile_home)
+
+
+@profile_router.message(F.text, UserProfileUpdateStates.first_name)
+async def handle_first_name(message: types.Message, state: FSMContext):
+    await state.update_data(first_name=message.text)
+    await message.answer("Now, enter your last name.")
+    await  state.set_state(UserProfileUpdateStates.last_name)
+
+
+@profile_router.message(F.text, UserProfileUpdateStates.last_name)
+async def handle_last_name(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    first_name = data["first_name"]
+    last_name = message.text
+
+    user_id = message.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    sweet_home.profile_home.edit_user_profile(user_profile, first_name, last_name)
+
+    await message.answer("Your profile has been updated.\n\n"
+                         f"First name: {first_name}\n"
+                         f"Last name: {last_name}\n\n"
+                         f"You have been redirected back to menu",
+                         reply_markup=user_profile.user_markup.get_current_markup())
+    await state.set_state(MenuStates.profile_home)

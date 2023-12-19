@@ -20,7 +20,10 @@ class UserProfile:
         return self.first_name + " " + self.last_name
 
 
-    def update(self, sql_connection: PsqlConnection):
+    def update(self, sql_connection: PsqlConnection, first_name: str, last_name: str):
+        self.first_name = first_name
+        self.last_name = last_name
+
         sql_connection.execute_query(f"""
             UPDATE user_profiles 
             SET first_name = %s, last_name = %s 
@@ -133,6 +136,7 @@ class UserProfile:
         self.user_markup.set_button_value("seeker_button", "Seeker Menu 🔍")
         self.user_markup.update_markup(2, 1)
         self.seeker_ref = seeker_profile
+        logging.info(f"Seeker profile {seeker_profile} was set")
 
 
     def _set_recruiter_profile(self, recruiter_profile: RecruiterProfile):
