@@ -29,3 +29,14 @@ class SeekerPortfolioEditingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
             "back_button": InlineKeyboardButton(text="Back ❌", callback_data="back")
         }
         self.update_keyboard()
+
+
+class SeekerVacancySearchingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "prev_vacancy_button": InlineKeyboardButton(text="Prev <-", callback_data="prev"),
+            "next_vacancy_button": InlineKeyboardButton(text="Next ->", callback_data="next"),
+            "back_button": InlineKeyboardButton(text="Back ❌", callback_data="back")
+        }
+        self.update_keyboard()

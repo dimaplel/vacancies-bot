@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from src.company_registry import CompanyRegistry
+from src.users.company_registry import CompanyRegistry
 from src.connections import PsqlConnection, Neo4jConnection, MongoDBConnection, RedisConnection
 from src.users.company import Company
 from src.keyboards.profile_keyboards import RecruiterProfileKeyboardMarkup
@@ -44,7 +44,7 @@ class RecruiterProfile:
                                    {"recruiter_id": self._recruiter_node_ref, "vacancy_id": vacancy_id})
         self.get_company(company_registry).metrics.increment_num_vacancies(redis_connection)
 
-        vacancy = Vacancy(self._user_id, vacancy_id)
+        vacancy = Vacancy(vacancy_id, self._user_id, document_ref)
         self._add_vacancy_to_cache(vacancy)
 
 

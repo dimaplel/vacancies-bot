@@ -12,7 +12,8 @@ from src.sweet_home import sweet_home
 
 from src.keyboards.seeker_inline_keyboards import (NoExperienceInlineKeyboardMarkup, 
                                                 SeekerPortfolioEditingInlineKeyboardMarkup, 
-                                                PortfolioAdditionInlineKeyboardMarkup)
+                                                PortfolioAdditionInlineKeyboardMarkup,
+                                                SeekerVacancySearchingInlineKeyboardMarkup)
 
 
 seeker_router = Router(name="Seeker Router")
@@ -34,8 +35,24 @@ async def seeker_home(message: types.Message, state: FSMContext):
         await state.set_state(MenuStates.seeker_profile_editing)
 
     elif message.text == seeker_markup.get_button_text("search_vacancies_button"):
-        # TODO: Handle vacancy searching logic
-        pass
+        vsc = sweet_home.seeker_home.add_search_context(user_id)
+        if vsc is None:
+            await message.answer("Failed to request valid vacancy search context",
+                reply_markup=seeker_profile.seeker_markup.get_current_markup())
+            await state.set_state(MenuStates.seeker_home)
+            return
+
+        first_vacancy = vsc.get_current_vacancy()
+        if first_vacancy is None:
+            await message.answer("There is no vacancies here!",
+                reply_markup=seeker_profile.seeker_markup.get_current_markup())
+            await state.set_state(MenuStates.seeker_home)
+            return
+
+        await message.answer(f"Welcome to vacancies search. First vacancy is: {first_vacancy.get_id()}", 
+            reply_markup=SeekerVacancySearchingInlineKeyboardMarkup().get_current_markup())
+        await state.set_state(MenuStates.seeker_vacancy_search)
+    
     elif message.text == seeker_markup.get_button_text("back_button"):
         await message.answer("Returning back to user profile menu", 
             reply_markup=user_profile.user_markup.get_current_markup())
