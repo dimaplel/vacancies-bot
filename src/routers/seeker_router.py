@@ -94,7 +94,8 @@ async def on_portfolio_position_message(message: types.Message, state: FSMContex
     await message.answer(f"OK, now we proceed with your working experience.\n\n"
                          f"Enter your experience title {Italic('For instance: Developer at ABC Inc.').as_html()} "
                          f"if you have one or press the button below.",
-                         parse_mode="HTML", reply_markup=NoExperienceInlineKeyboardMarkup().get_current_markup())
+                         parse_mode="HTML", 
+                         reply_markup=NoExperienceInlineKeyboardMarkup().get_current_markup())
     await state.set_state(SeekerPortfolioUpdateStates.experience_title)
 
 
@@ -107,25 +108,29 @@ async def no_prior_experience(call: types.CallbackQuery, state: FSMContext):
     assert seeker_profile is not None
 
     data = await state.get_data()
-    sweet_home.seeker_home.update_seeker_portfolio(seeker_profile, data['portfolio_ref'])
+    portfolio_ref = data['portfolio_ref']
+    sweet_home.seeker_home.update_seeker_portfolio(seeker_profile, portfolio_ref)
 
-    await call.message.answer(f"{Bold('You have successfully registered a seeker profile.').as_html()}\n\n"
+    await call.message.answer(f"{Bold('You have successfully updated your portfolio.').as_html()}\n\n"
                               f"{Bold('— Name:').as_html()} {user_profile.get_full_name()}\n"
-                              f"{Bold('— Desired position:').as_html()} {data['position']}\n\n" +
-                              Italic("You may now access seeker menu!").as_html(),
+                              f"{Bold('— Desired position:').as_html()} {portfolio_ref['position']}",
                               parse_mode="HTML",
-                              reply_markup=user_profile.user_markup.get_current_markup())
+                              reply_markup=seeker_profile.seeker_markup.get_current_markup())
+                              
     await call.message.delete()
-    await state.set_state(state=None)
+    await state.set_data({})
+    await state.set_state(state=MenuStates.seeker_home)
 
 
 @seeker_router.message(F.text, SeekerPortfolioUpdateStates.experience_title)
 async def on_portfolio_experience_title_message(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    if data.get("experiences") is None:
-        await state.update_data(experiences=[{"title": message.text}])
+    portfolio_ref = data['portfolio_ref']
+
+    if portfolio_ref.get("experiences") is None:
+        portfolio_ref["experiences"] = [{"title": message.text}]
     else:
-        data["experiences"].append({"title": message.text})
+        portfolio_ref["experiences"].append({"title": message.text})
 
     await message.answer("Noted! Now, enter the description of your previous experience.")
     await state.set_state(SeekerPortfolioUpdateStates.experience_desc)
@@ -134,11 +139,15 @@ async def on_portfolio_experience_title_message(message: types.Message, state: F
 @seeker_router.message(F.text, SeekerPortfolioUpdateStates.experience_desc)
 async def add_experience_desc(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    logging.info(f"Current portfolio: {data.get('experiences')}")
-    experiences = data.get("experiences")
+    portfolio_ref = data['portfolio_ref']
+
+    logging.info(f"Current portfolio: {portfolio_ref.get('experiences')}")
+    
+    experiences = portfolio_ref.get("experiences")
     exp_idx = len(experiences) - 1
-    experiences[exp_idx].update({"desc": message.text})
-    await state.update_data(experiences=experiences)
+    
+    experiences[exp_idx].update(desc = message.text)
+
     await message.answer("Good one! Now enter a time frame you have had this experience at.")
     await state.set_state(SeekerPortfolioUpdateStates.experience_timeline)
 
@@ -146,10 +155,12 @@ async def add_experience_desc(message: types.Message, state: FSMContext):
 @seeker_router.message(F.text, SeekerPortfolioUpdateStates.experience_timeline)
 async def add_experience_timeline(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    experiences = data.get("experiences")
+    portfolio_ref = data['portfolio_ref']
+    
+    experiences = portfolio_ref.get("experiences")
     exp_idx = len(experiences) - 1
+
     experiences[exp_idx].update({"timeline": message.text})
-    await state.update_data(experiences=experiences)
     experiences_text = ""
     for exp in experiences:
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
@@ -157,7 +168,8 @@ async def add_experience_timeline(message: types.Message, state: FSMContext):
                              f"{Bold('— Duration: ').as_html()} {exp['timeline']}\n\n")
     await message.answer(f"{Bold('Your current experiences: ').as_html()}\n\n{experiences_text}"
                          f"Please choose an option and press a button below.",
-                         parse_mode='HTML', reply_markup=PortfolioAdditionInlineKeyboardMarkup().get_current_markup())
+                         parse_mode='HTML', 
+                         reply_markup=PortfolioAdditionInlineKeyboardMarkup().get_current_markup())
     await state.set_state(SeekerPortfolioUpdateStates.confirm_or_add_portfolio)
 
 
@@ -172,13 +184,12 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     portfolio_ref = data["portfolio_ref"]
-    portfolio_ref["experiences"] = data.get("experiences")
     if not sweet_home.seeker_home.update_seeker_portfolio(seeker_profile, portfolio_ref):
         # TODO: Handle this somehow
         logging.error("Failed to update seeker's portfolio!")
     
     experiences_text = ""
-    for exp in data.get("experiences"):
+    for exp in portfolio_ref.get("experiences"):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
                              f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
                              f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
@@ -187,11 +198,11 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
                               f"{Bold('— Desired position:').as_html()} {portfolio_ref['position']}\n\n" 
                               f"{Bold('— Portfolio: ').as_html()}\n\n{experiences_text}",
                               parse_mode="HTML",
-                              reply_markup=user_profile.user_markup.get_current_markup())
+                              reply_markup=seeker_profile.seeker_markup.get_current_markup())
 
     await call.message.delete()
     await state.set_data({})
-    await state.set_state(state=MenuStates.seeker_profile_editing)
+    await state.set_state(state=MenuStates.seeker_home)
 
 
 
@@ -200,5 +211,4 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer(f"Let's add another experience!\n\n"
                          f"Enter your experience title {Italic('For instance: Developer at ABC Inc.').as_html()}",
                          parse_mode="HTML")
-    logging.info(f"Current portfolio: {(await state.get_data()).get('experiences')}")
     await state.set_state(SeekerPortfolioUpdateStates.experience_title)
