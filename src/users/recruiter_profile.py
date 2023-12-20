@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 from src.company_registry import CompanyRegistry
@@ -32,6 +33,7 @@ class RecruiterProfile:
     def add_vacancy(self, psql_connection: PsqlConnection, mongodb_connection: MongoDBConnection,
                     neo4j_connection: Neo4jConnection, redis_connection: RedisConnection,
                     company_registry: CompanyRegistry, vacancy_data: dict) -> None:
+        logging.info(f"Adding vacancy with data {vacancy_data}")
         document_ref = mongodb_connection.insert_document("vacancies", vacancy_data)
         vacancy_id = psql_connection.execute_query_fetchone("INSERT INTO vacancies (recruiter_id, vacancy_doc_ref) "
                                                             "VALUES (%s, %s) RETURNING vacancy_id;",

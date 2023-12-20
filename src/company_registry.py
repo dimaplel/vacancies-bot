@@ -25,6 +25,7 @@ class CompanyRegistry:
 
         company_name = row['name']
         company = Company(company_id, company_name)
+        company.update_metrics(self._redis_connection)
         self._add_company_to_cache(company)
         return company
 

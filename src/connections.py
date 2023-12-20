@@ -225,7 +225,7 @@ class MongoDBConnection:
             logging.info(f"Inserted document with ID: {result.inserted_id}")
             return str(result.inserted_id)
         except Exception as e:
-            logging.error(f"Error inserting document into MongoDB: {e}")
+            logging.error(f"Error inserting document {document} into MongoDB: {e}")
             return None
 
 

@@ -95,7 +95,8 @@ async def handle_salary(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
     vacancy: dict = data['vacancy_ref']
-    vacancy.update(salary=float(message.text))
+    vacancy.update(salary=float(message.text), company=vacancy["company"].get_id())
+
     sweet_home.recruiter_home.add_vacancy(recruiter_profile, vacancy)
 
     await message.answer("Your vacancy has been added and can be searched by anyone now! "
