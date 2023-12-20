@@ -302,4 +302,6 @@ async def handle_last_name(message: types.Message, state: FSMContext):
                          f"Last name: {last_name}\n\n"
                          f"You have been redirected back to menu",
                          reply_markup=user_profile.user_markup.get_current_markup())
+
+    await state.set_data({})
     await state.set_state(MenuStates.profile_home)

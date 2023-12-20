@@ -76,5 +76,12 @@ class CompaniesChoiceInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
             self._keyboard_buttons.get("companies").append(InlineKeyboardButton(text=c.name, callback_data=str(i)))
             
 
-
+class ConfirmOrChangeDescriptionInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "confirm_button": InlineKeyboardButton(text="Confirm description ✅", callback_data="confirm"),
+            "retry_button": InlineKeyboardButton(text="Enter again 🔁", callback_data="retry")
+        }
+        self.update_keyboard(2)
 

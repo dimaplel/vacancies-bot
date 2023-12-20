@@ -140,6 +140,7 @@ class RedisConnection:
         self.password = pswd
         self.conn: Optional[redis.Redis] = None
 
+
     def open(self):
         try:
             logging.info(f"Opening Redis connection for host {self.host}")
@@ -147,12 +148,14 @@ class RedisConnection:
         except Exception as e:
             logging.error("Error while opening connection in %s: %s" % (self.__class__.__name__, e))
 
+
     def close(self):
         try:
             self.conn.close()
             print("Disconnected from Redis")
         except Exception as e:
             logging.error("Error while closing connection in %s: %s" % (self.__class__.__name__, e))
+
 
     def get(self, key: str) -> (str | bytes | None):
         try:
@@ -163,6 +166,7 @@ class RedisConnection:
             logging.error(f"Error getting value for {key} from Redis: {e}")
             return None
 
+
     def set(self, key: str, value: (str | bytes | int | float)):
         try:
             self.connection.set(key, value)
@@ -170,6 +174,21 @@ class RedisConnection:
         except Exception as e:
             logging.error(f"Error setting {key} in Redis: {e}")
 
+
+    def increment(self, key: str):
+        try:
+            self.connection.incr(key)
+            logging.info(f"Incremented value for {key} in Redis")
+        except Exception as e:
+            logging.error(f"Error incrementing value for {key} in Redis: {e}")
+
+
+    def decrement(self, key: str):
+        try:
+            self.connection.decr(key)
+            logging.info(f"Decremented value for {key} in Redis")
+        except Exception as e:
+            logging.error(f"Error decrementing value for {key} in Redis: {e}")
 
 class MongoDBConnection:
     def __init__(self, host:str, user:str, password:str, db_name: str):

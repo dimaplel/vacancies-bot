@@ -6,6 +6,8 @@ from config import cfg
 from connections import PsqlConnection, Neo4jConnection, RedisConnection, MongoDBConnection
 from users.user_profile import UserProfile
 from users.seeker_profile import SeekerProfile
+from users.recruiter_profile import RecruiterProfile
+from users.vacancy import Vacancy
 from company_registry import CompanyRegistry
 
 
@@ -57,6 +59,7 @@ class SweetConnections:
         # For instance recruiter_profiles need companies table to exist 
         self.sql_connection.execute_query(f"""
             CREATE TABLE IF NOT EXISTS vacancies (
+                vacancy_id SERIAL PRIMARY KEY,
                 recruiter_id BIGINT, 
                 vacancy_doc_ref VARCHAR(255))""")
 
@@ -84,10 +87,9 @@ sweet_connections = SweetConnections()
 
 
 class ProfileHome:
-    def __init__(self, sweet_connections: SweetConnections):
+    def __init__(self, sweet_connections: SweetConnections, company_registry: CompanyRegistry):
         self._sweet_connections = sweet_connections
-        self._company_registry = CompanyRegistry(self._sweet_connections.sql_connection,
-                                                 self._sweet_connections.redis_connection)
+        self._company_registry = company_registry
 
 
     def request_seeker_profile(self, user_profile: UserProfile) -> bool:
@@ -150,17 +152,35 @@ class SeekerHome:
 
 
 class RecruiterHome:
-    def __init__(self, sweet_connections: SweetConnections):
+    def __init__(self, sweet_connections: SweetConnections, company_registry: CompanyRegistry):
         self._sweet_connections = sweet_connections
+        self._company_registry = company_registry
 
+    def get_vacancy_data(self, vacancy: Vacancy):
+        return vacancy.get_vacancy_data(self._sweet_connections.mongodb_connection)
+
+
+    def get_company(self, recruiter_profile: RecruiterProfile):
+        return recruiter_profile.get_company(self._company_registry)
+
+
+    def add_vacancy(self, recruiter_profile: RecruiterProfile, vacancy_data: dict):
+        recruiter_profile.add_vacancy(self._sweet_connections.sql_connection,
+                                      self._sweet_connections.mongodb_connection,
+                                      self._sweet_connections.neo4j_connection,
+                                      self._sweet_connections.redis_connection, self._company_registry,
+                                      vacancy_data)
 
 
 class SweetHome:
     def __init__(self, sweet_connections: SweetConnections) -> None:
         self._sweet_connections = sweet_connections
+        self._company_registry = CompanyRegistry(self._sweet_connections.sql_connection,
+                                                 self._sweet_connections.redis_connection)
         self._user_cache: dict[int, UserProfile] = {}
+        self.profile_home = ProfileHome(sweet_connections, self._company_registry)
         self.seeker_home = SeekerHome(sweet_connections)
-        self.profile_home = ProfileHome(sweet_connections)
+        self.recruiter_home = RecruiterHome(sweet_connections, self._company_registry)
 
 
     def request_user_profile(self, user_id: int) -> (UserProfile | None):

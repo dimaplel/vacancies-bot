@@ -7,11 +7,14 @@ class Vacancy:
         self._recruiter_id = recruiter_id
         self._vacancy_id = vacancy_id
 
-    
+
+    def get_id(self) -> int:
+        return self._vacancy_id
+
     def get_recruiter_id(self) -> int:
         return self._recruiter_id
 
 
-    def get_json_document(self, mongodb_connection: MongoDBConnection) -> (Dict[str, Any] | None):
+    def get_vacancy_data(self, mongodb_connection: MongoDBConnection) -> (Dict[str, Any] | None):
         return mongodb_connection.get_document("vacancies", str(self._vacancy_id))
     

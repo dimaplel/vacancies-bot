@@ -20,10 +20,15 @@ class CompanyMetrics:
         return True
 
 
-    def create_metrics(self, redis_connection: RedisConnection, employees_count: int, vacancies_count: int) -> None:
+    def create_metrics(self, redis_connection: RedisConnection, employees_count: int, vacancies_count: int = 0) -> None:
         redis_connection.set(self._employees_ref, employees_count)
         redis_connection.set(self._vacancies_ref, vacancies_count)
         self.update(redis_connection)
+
+
+    def increment_num_vacancies(self, redis_connection: RedisConnection):
+        redis_connection.increment(self._vacancies_ref)
+        self.num_vacancies += 1
 
 
 class Company:
