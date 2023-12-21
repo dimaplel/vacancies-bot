@@ -11,6 +11,7 @@ class MenuStates(StatesGroup):
 
 
 class RecruiterMenuStates(StatesGroup):
+    choose_vacancy = State()
     vacancy_position = State()
     vacancy_description = State()
     confirm_or_retry_description = State()

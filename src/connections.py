@@ -248,3 +248,11 @@ class MongoDBConnection:
         return True if (result.acknowledged 
             and result.matched_count > 0 
             and result.modified_count > 0) else False
+
+
+    def find(self, collection_name: str, doc_ids: list[str]) -> list[dict[str, Any]]:
+        collection: Collection = self.db[collection_name]
+
+        object_ids = [ObjectId(doc_id) for doc_id in doc_ids]
+        documents = list(collection.find({"_id": {"$in": object_ids}}))
+        return documents

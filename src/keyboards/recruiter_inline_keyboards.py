@@ -85,3 +85,31 @@ class ConfirmOrChangeDescriptionInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         }
         self.update_keyboard(2)
 
+
+class KeepThePreviousDescriptionInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "back_button": InlineKeyboardButton(text="I changed my mind, keep the previous one", callback_data="back")
+        }
+        self.update_keyboard()
+
+
+class GoBackInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "back_button": InlineKeyboardButton(text="Go back ⬅️", callback_data="back")
+        }
+        self.update_keyboard()
+
+
+class VacancyDisplayInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "back_button": InlineKeyboardButton(text="Go back ⬅️", callback_data="back"),
+            "delete_button": InlineKeyboardButton(text="Delete vacancy ❌", callback_data="delete"),
+            "applicants_button": InlineKeyboardButton(text="See applicants 👥", callback_data="applicants")
+        }
+        self.update_keyboard()

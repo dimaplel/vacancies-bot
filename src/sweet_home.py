@@ -282,6 +282,11 @@ class RecruiterHome:
                                       vacancy_data)
 
 
+    def get_vacancies_data(self, recruiter_profile: RecruiterProfile):
+        return recruiter_profile.get_vacancies_data(self._sweet_connections.sql_connection,
+                                                    self._sweet_connections.mongodb_connection)
+
+
 class SweetHome:
     def __init__(self, sweet_connections: SweetConnections) -> None:
         self._sweet_connections = sweet_connections

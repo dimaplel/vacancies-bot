@@ -48,6 +48,16 @@ class RecruiterProfile:
         self._add_vacancy_to_cache(vacancy)
 
 
+    def get_vacancies_data(self, psql_connection:PsqlConnection, mongodb_connection: MongoDBConnection):
+        vacancies_id_rows = psql_connection.execute_query("SELECT vacancy_doc_ref FROM vacancies "
+                                                          "WHERE recruiter_id = %s",self._user_id)
+        if len(vacancies_id_rows) == 0:
+            return None
+
+        vacancies_id = [row["vacancy_doc_ref"] for row in vacancies_id_rows]
+        vacancies_data = mongodb_connection.find("vacancies", vacancies_id)
+        return vacancies_data
+
     def _add_vacancy_to_cache(self, vacancy: Vacancy) -> None:
         if self._cached_vacancies is None:
             self._cached_vacancies = {}
