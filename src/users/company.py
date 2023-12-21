@@ -31,6 +31,11 @@ class CompanyMetrics:
         self.num_vacancies += 1
 
 
+    def decrement_num_vacancies(self, redis_connection: RedisConnection):
+        redis_connection.decrement(self._vacancies_ref)
+        self.num_vacancies -= 1
+
+
 class Company:
     def __init__(self, company_id: int, name: str):
         self._id: int = company_id

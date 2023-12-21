@@ -249,6 +249,15 @@ class MongoDBConnection:
             and result.matched_count > 0 
             and result.modified_count > 0) else False
 
+    def delete_document(self, collection_name: str, doc_id: str) -> bool:
+        try:
+            collection: Collection = self.db[collection_name]
+            result = collection.delete_one({"_id": ObjectId(doc_id)})
+            return result.deleted_count > 0
+        except Exception as e:
+            logging.error(f"Error deleting document with ID {doc_id} from MongoDB: {e}")
+            return False
+
 
     def find(self, collection_name: str, doc_ids: list[str]) -> list[dict[str, Any]]:
         collection: Collection = self.db[collection_name]

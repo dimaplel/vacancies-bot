@@ -1,5 +1,6 @@
 from src.keyboards.inline_keyboard_markup import SweetInlineKeyboardMarkup, InlineKeyboardBuilder
 from src.users.company import Company
+from src.users.seeker_profile import SeekerProfile
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -113,3 +114,49 @@ class VacancyDisplayInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
             "applicants_button": InlineKeyboardButton(text="See applicants 👥", callback_data="applicants")
         }
         self.update_keyboard()
+
+
+class DeleteVacancyOrGoBackInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "delete_button": InlineKeyboardButton(text="Yes, I'm sure, delete the vacancy ❌", callback_data="confirm"),
+            "back_button": InlineKeyboardButton(text="Go back ⬅️", callback_data="back"),
+        }
+        self.update_keyboard(2)
+
+
+class ApplicantsListDisplayInlineKeyboard(SweetInlineKeyboardMarkup):
+    def __init__(self, applicants_length: int):
+        super().__init__()
+        self._cur_applicant: int = 0
+        self._applicants_length: int = applicants_length
+        self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
+            "previous_button": InlineKeyboardButton(text="Previous ⬅️", callback_data="back"),
+            "close_display": InlineKeyboardButton(text="Stop displaying", callback_data="exit"),
+            "next_button": InlineKeyboardButton(text="Next ➡️", callback_data="next"),
+        }
+        self.update_keyboard()
+
+
+    def update_keyboard(self) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+
+        if self._cur_applicant != 0:
+            builder.add(self._keyboard_buttons.get("previous_button"))
+
+        builder.add(self._keyboard_buttons.get("close_display"))
+
+        if self._cur_applicant != self._applicants_length - 1:
+            builder.add(self._keyboard_buttons.get("next_button"))
+
+        return self.get_current_markup()
+
+
+    def flip_page(self, is_next: bool):
+        self._cur_applicant += 1 if is_next else -1
+        self.update_keyboard()
+
+
+    def get_current_applicant(self):
+        return self._cur_applicant

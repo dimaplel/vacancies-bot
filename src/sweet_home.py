@@ -282,9 +282,22 @@ class RecruiterHome:
                                       vacancy_data)
 
 
+    def delete_vacancy(self, recruiter_profile: RecruiterProfile, vacancy_data: tuple):
+        recruiter_profile.delete_vacancy(self._sweet_connections.sql_connection,
+                                      self._sweet_connections.mongodb_connection,
+                                      self._sweet_connections.neo4j_connection,
+                                      self._sweet_connections.redis_connection, self._company_registry,
+                                      vacancy_data)
+
+
     def get_vacancies_data(self, recruiter_profile: RecruiterProfile):
         return recruiter_profile.get_vacancies_data(self._sweet_connections.sql_connection,
                                                     self._sweet_connections.mongodb_connection)
+
+
+    def get_vacancy_applicants(self, recruiter_profile: RecruiterProfile, vacancy_id: int):
+        return recruiter_profile.get_vacancy_applicants(self._sweet_connections.neo4j_connection, vacancy_id)
+
 
 
 class SweetHome:

@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import Router, F, types
+from aiogram.methods.get_chat_member import GetChatMember
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.formatting import Italic, Bold
 
@@ -9,8 +10,12 @@ from src.users.company import Company
 from src.users.user_profile import UserProfile
 from src.users.recruiter_profile import RecruiterProfile
 from src.sweet_home import sweet_home
+from src.bot import bot
 from src.keyboards.recruiter_inline_keyboards import (ConfirmOrChangeDescriptionInlineKeyboardMarkup,
-                                                      KeepThePreviousDescriptionInlineKeyboardMarkup)
+                                                      KeepThePreviousDescriptionInlineKeyboardMarkup,
+                                                      VacancyDisplayInlineKeyboardMarkup,
+                                                      DeleteVacancyOrGoBackInlineKeyboardMarkup,
+                                                      ApplicantsListDisplayInlineKeyboard)
 
 
 recruiter_router = Router(name="Recruiter Router")
@@ -45,15 +50,16 @@ async def recruiter_home(message: types.Message, state: FSMContext):
 
         vacancies_text = ""
         for i, vacancy in enumerate(vacancies):
-            vacancies_text += f"{i}) {vacancy['position']}"
+            vacancies_text += f"{i}) {vacancy[1]['position']}\n"
 
         await message.answer(f"Your vacancies:\n\n"
-                             f"{vacancies_text}\n\n"
+                             f"{vacancies_text}\n"
                              f"Choose vacancy to display by typing its index.")
         await state.set_state(RecruiterMenuStates.choose_vacancy)
 
     elif message.text == recruiter_markup.get_button_text("back_button"):
-        await message.answer("Returning back to user profile menu", reply_markup=user_profile.user_markup.get_current_markup())
+        await message.answer("Returning back to user profile menu",
+                             reply_markup=user_profile.user_markup.get_current_markup())
         await state.set_state(MenuStates.profile_home)
 
 
@@ -77,10 +83,159 @@ async def vacancy_display(message: types.Message, state: FSMContext):
     vacancies = data["vacancies"]
 
     chosen_vacancy = vacancies[int(message.text)]
-    await message.answer(f"{Bold('Vacancy ' + chosen_vacancy['position']).as_html()}\n\n"
-                         f"{chosen_vacancy['description']}\n\n"
-                         f"{Italic('Salary: ').as_html() + chosen_vacancy['salary']}\n\n"
-                         f"Choose an action.", )
+    chosen_vacancy_data = chosen_vacancy[1]
+    await state.update_data(chosen_vacancy=chosen_vacancy)
+
+    await message.answer(f"{Bold('Vacancy ' + chosen_vacancy_data['position']).as_html()}\n\n"
+                         f"{chosen_vacancy_data['description']}\n\n"
+                         f"{Italic('Salary: ').as_html() + str(chosen_vacancy_data['salary'])}\n\n"
+                         f"Choose an action.", parse_mode='HTML',
+                         reply_markup=VacancyDisplayInlineKeyboardMarkup().get_current_markup())
+    await state.set_state(RecruiterMenuStates.manage_vacancy)
+
+
+@recruiter_router.callback_query(F.data == "back", RecruiterMenuStates.manage_vacancy)
+async def back_to_vacancies(call:types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    vacancies = data["vacancies"]
+    try:
+        data.pop("chosen_vacancy")
+    except KeyError:
+        pass
+
+    vacancies_text = ""
+    for i, vacancy in enumerate(vacancies):
+        vacancies_text += f"{i}) {vacancy[1]['position']}\n"
+
+    await call.message.answer(f"Your vacancies:\n\n"
+                         f"{vacancies_text}\n\n"
+                         f"Choose vacancy to display by typing its index.")
+    await call.message.delete()
+
+    await state.set_state(RecruiterMenuStates.choose_vacancy)
+
+
+@recruiter_router.callback_query(F.data == "delete", RecruiterMenuStates.manage_vacancy)
+async def vacancy_removal_confirmation(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer("This action will forever remove this vacancy, are you sure about it?",
+                              reply_markup=DeleteVacancyOrGoBackInlineKeyboardMarkup().get_current_markup())
+    await state.set_state(RecruiterMenuStates.confirm_vacancy_removal)
+
+
+@recruiter_router.callback_query(F.data == "back", RecruiterMenuStates.confirm_vacancy_removal)
+async def back_to_vacancy_action(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    chosen_vacancy = data["chosen_vacancy"]
+    chosen_vacancy_data = chosen_vacancy[1]
+
+    await call.message.answer(f"{Bold('Vacancy ' + chosen_vacancy_data['position']).as_html()}\n\n"
+                         f"{chosen_vacancy_data['description']}\n\n"
+                         f"{Italic('Salary: ').as_html() + str(chosen_vacancy_data['salary'])}\n\n"
+                         f"Choose an action.", parse_mode='HTML',
+                         reply_markup=VacancyDisplayInlineKeyboardMarkup().get_current_markup())
+    await call.message.delete()
+    await state.set_state(RecruiterMenuStates.manage_vacancy)
+
+
+@recruiter_router.callback_query(F.data == "confirm", RecruiterMenuStates.confirm_vacancy_removal)
+async def delete_vacancy(call: types.CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    recruiter_profile: RecruiterProfile = user_profile.recruiter_ref
+
+    data = await state.get_data()
+    chosen_vacancy = data["chosen_vacancy"]
+    sweet_home.recruiter_home.delete_vacancy(recruiter_profile, chosen_vacancy)
+
+    await call.message.answer(f"Your vacancy for '{chosen_vacancy[1]['positions']}' was permanently deleted!",
+                              reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
+
+    await call.message.delete()
+    await state.set_data({})
+    await state.set_state(MenuStates.recruiter_home)
+
+
+@recruiter_router.callback_query(F.data == "applicants", RecruiterMenuStates.manage_vacancy)
+async def display_applicants(call: types.CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    recruiter_profile = user_profile.recruiter_ref
+
+    data = await state.get_data()
+    chosen_vacancy = data["chosen_vacancy"]
+
+    applicants_id_list = sweet_home.recruiter_home.get_vacancy_applicants(recruiter_profile, chosen_vacancy[0])
+    if len(applicants_id_list) == 0:
+        await call.message.answer("This vacancy has no applicants.",
+                                  reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
+        await call.message.delete()
+        await state.set_data({})
+        await state.set_state(MenuStates.recruiter_home)
+        return
+
+    user_profiles_list = [sweet_home.request_user_profile(uid) for uid in applicants_id_list]
+
+    current_applicant_profile = user_profiles_list[0]
+    current_portfolio = sweet_home.seeker_home.request_seeker_portfolio(current_applicant_profile.seeker_ref)
+    telegram_profile = await GetChatMember(chat_id=current_applicant_profile.get_id(),
+                                     user_id=current_applicant_profile.get_id()).as_(bot)
+    keyboard = ApplicantsListDisplayInlineKeyboard(len(user_profiles_list))
+    await state.update_data(applicant_profiles=user_profiles_list, keyboard=keyboard)
+
+    portfolio_text = ""
+    for exp in current_portfolio.get("experiences"):
+        portfolio_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
+                           f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
+                           f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
+
+    await call.message.answer(f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
+                              f"Main position: {current_portfolio.get('position')}\n"
+                              f"Past experiences:\n\n"
+                              f"{portfolio_text}", parse_mode='HTML',
+                              reply_markup=keyboard.get_current_markup())
+    await call.message.delete()
+    await state.set_state(RecruiterMenuStates.applicants_displaying)
+
+
+@recruiter_router.callback_query(F.data.in_({'next', 'back'}), RecruiterMenuStates.applicants_displaying)
+async def previous_applicant(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    keyboard: ApplicantsListDisplayInlineKeyboard = data.get("keyboard")
+    keyboard.flip_page(is_next=False if F.data == "back" else True)
+    current_applicant_index = keyboard.get_current_applicant()
+
+    current_applicant_profile = data.get("applicant_profiles")[current_applicant_index]
+    current_portfolio = sweet_home.seeker_home.request_seeker_portfolio(current_applicant_profile.seeker_ref)
+    telegram_profile = await GetChatMember(chat_id=current_applicant_profile.get_id(),
+                                           user_id=current_applicant_profile.get_id()).as_(bot)
+
+    portfolio_text = ""
+    for exp in current_portfolio.get("experiences"):
+        portfolio_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
+                           f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
+                           f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
+
+    await call.message.answer(f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
+                              f"Main position: {current_portfolio.get('position')}\n"
+                              f"Past experiences:\n\n"
+                              f"{portfolio_text}", parse_mode='HTML',
+                              reply_markup=keyboard.get_current_markup())
+    await call.message.delete()
+
+
+@recruiter_router.callback_query(F.data == "exit", RecruiterMenuStates.applicants_displaying)
+async def exit_applicants_display(call: types.CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+
+    recruiter_profile: RecruiterProfile = user_profile.recruiter_ref
+
+    await call.message.answer(f"You returned back to your recruiter menu.",
+                              reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
+    await call.message.delete()
+
+    await state.set_data({})
+    await state.set_state(MenuStates.recruiter_home)
 
 
 @recruiter_router.message(F.text, RecruiterMenuStates.vacancy_position)

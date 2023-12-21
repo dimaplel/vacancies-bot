@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from src.connections import PsqlConnection, MongoDBConnection
+from src.connections import PsqlConnection, MongoDBConnection, Neo4jConnection
 
 
 class Vacancy:
@@ -19,6 +19,18 @@ class Vacancy:
 
     def get_vacancy_data(self, mongodb_connection: MongoDBConnection) -> (Dict[str, Any] | None):
         return mongodb_connection.get_document("vacancies", self._vacancy_doc_ref)
+
+
+    def get_applicants(self, neo4j_connection: Neo4jConnection):
+        applicants_id_list = neo4j_connection.run_query("MATCH (s:Seeker)-[:applied_to]->(v:Vacancy {vacancy_id: $vacancy_id})"
+                                   " RETURN DISTINCT s.user_id AS user_id_list",
+                                   {"vacancy_id": self._vacancy_id})
+
+        if len(applicants_id_list) == 0:
+            return applicants_id_list
+
+        return applicants_id_list[0]["user_id_list"]
+
     
 
 class VacanciesChunk:

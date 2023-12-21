@@ -49,14 +49,37 @@ class RecruiterProfile:
 
 
     def get_vacancies_data(self, psql_connection:PsqlConnection, mongodb_connection: MongoDBConnection):
-        vacancies_id_rows = psql_connection.execute_query("SELECT vacancy_doc_ref FROM vacancies "
+        vacancies_rows = psql_connection.execute_query("SELECT vacancy_doc_ref, vacancy_id FROM vacancies "
                                                           "WHERE recruiter_id = %s",self._user_id)
-        if len(vacancies_id_rows) == 0:
+        if len(vacancies_rows) == 0:
             return None
 
-        vacancies_id = [row["vacancy_doc_ref"] for row in vacancies_id_rows]
-        vacancies_data = mongodb_connection.find("vacancies", vacancies_id)
-        return vacancies_data
+        vacancies_doc_refs = [row["vacancy_doc_ref"] for row in vacancies_rows if row["vacancy_doc_ref"] is not None]
+        vacancies_ids = [row["vacancy_id"] for row in vacancies_rows]
+        vacancies_data = mongodb_connection.find("vacancies", vacancies_doc_refs)
+        return list(zip(vacancies_ids, vacancies_data))
+
+
+    def delete_vacancy(self, psql_connection: PsqlConnection, mongodb_connection: MongoDBConnection,
+                    neo4j_connection: Neo4jConnection, redis_connection: RedisConnection,
+                    company_registry: CompanyRegistry, vacancy_data: tuple):
+        vacancy_id, vacancy_doc_ref = vacancy_data
+
+        neo4j_connection.run_query("MATCH (vacancy:Vacancy {vacancy_id: $vacancy_id}) "
+                                   "OPTIONAL MATCH (vacancy)-[published_by:published_by]->() "
+                                   "OPTIONAL MATCH (vacancy)<-[applied_to:applied_to]-() "
+                                   "DETACH DELETE vacancy, published_by, applied_to",
+                                   {"vacancy_id": vacancy_id})
+        psql_connection.execute_query(f"DELETE FROM vacancies WHERE vacancy_id = {vacancy_id}")
+        mongodb_connection.delete_document("vacancies", vacancy_doc_ref["_id"])
+
+        self.get_company(company_registry).metrics.decrement_num_vacancies(redis_connection)
+        self._cached_vacancies.pop(vacancy_id)
+
+
+    def get_vacancy_applicants(self, neo4j_connection: Neo4jConnection, vacancy_id: int):
+        return self._cached_vacancies[vacancy_id].get_applicants(neo4j_connection)
+
 
     def _add_vacancy_to_cache(self, vacancy: Vacancy) -> None:
         if self._cached_vacancies is None:
