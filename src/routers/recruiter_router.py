@@ -49,16 +49,16 @@ async def recruiter_home(message: types.Message, state: FSMContext):
         await state.set_data({"vacancies": vacancies})
 
         vacancies_text = ""
-        for i, vacancy in enumerate(vacancies):
-            vacancies_text += f"{i}) {vacancy[1]['position']}\n"
+        for i, vacancy in enumerate(vacancies, start=1):
+            vacancies_text += f"{i}) {Italic(vacancy[1]['position']).as_html()}\n"
 
-        await message.answer(f"Your vacancies:\n\n"
+        await message.answer(f"{Bold('Your vacancies:').as_html()}\n\n"
                              f"{vacancies_text}\n"
-                             f"Choose vacancy to display by typing its index.")
+                             f"Choose vacancy to display by typing its index.", parse_mode='HTML')
         await state.set_state(RecruiterMenuStates.choose_vacancy)
 
     elif message.text == recruiter_markup.get_button_text("back_button"):
-        await message.answer("Returning back to user profile menu",
+        await message.answer("Returning back to user profile menu.",
                              reply_markup=user_profile.user_markup.get_current_markup())
         await state.set_state(MenuStates.profile_home)
 
@@ -77,12 +77,12 @@ async def back_to_menu(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(MenuStates.recruiter_home)
 
 
-@recruiter_router.message(F.text.regexp(r'^(0|[1-9]\d*)$'), RecruiterMenuStates.choose_vacancy)
+@recruiter_router.message(F.text.regexp(r'^([1-9]\d*)$'), RecruiterMenuStates.choose_vacancy)
 async def vacancy_display(message: types.Message, state: FSMContext):
     data = await state.get_data()
     vacancies = data["vacancies"]
 
-    chosen_vacancy = vacancies[int(message.text)]
+    chosen_vacancy = vacancies[int(message.text) - 1]
     chosen_vacancy_data = chosen_vacancy[1]
     await state.update_data(chosen_vacancy=chosen_vacancy)
 
@@ -104,12 +104,12 @@ async def back_to_vacancies(call:types.CallbackQuery, state: FSMContext):
         pass
 
     vacancies_text = ""
-    for i, vacancy in enumerate(vacancies):
-        vacancies_text += f"{i}) {vacancy[1]['position']}\n"
+    for i, vacancy in enumerate(vacancies, start=1):
+        vacancies_text += f"{i}) {Italic(vacancy[1]['position']).as_html()}\n"
 
-    await call.message.answer(f"Your vacancies:\n\n"
-                         f"{vacancies_text}\n\n"
-                         f"Choose vacancy to display by typing its index.")
+    await call.message.answer(f"{Bold('Your vacancies:').as_html()}\n\n"
+                         f"{vacancies_text}\n"
+                         f"Choose vacancy to display by typing its index.", parse_mode='HTML')
     await call.message.delete()
 
     await state.set_state(RecruiterMenuStates.choose_vacancy)
@@ -168,7 +168,7 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
     user_profiles_list = [sweet_home.request_user_profile(uid) for uid in applicants_id_list
                           if sweet_home.request_user_profile(uid) is not None]
     if len(applicants_id_list) == 0:
-        await call.message.answer("This vacancy has no applicants.",
+        await call.message.answer("This vacancy has no applicants, you were returned to recruiter menu.",
                                   reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
         await call.message.delete()
         await state.set_data({})
@@ -178,7 +178,8 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
     logging.info(f"Retrieved applicants with ids: {applicants_id_list}")
 
     if len(user_profiles_list) == 0:
-        await call.message.answer("Applicants don't have a valid seeker profile and cannot be viewed properly.",
+        await call.message.answer("Applicants don't have a valid seeker profile and cannot be viewed properly, "
+                                  "you were returned to recruiter menu.",
                                   reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
         await call.message.delete()
         await state.set_data({})
@@ -213,6 +214,8 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
 async def previous_applicant(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     keyboard: ApplicantsListDisplayInlineKeyboard = data.get("keyboard")
+    prev_keyboard = keyboard.get_current_markup()
+
     is_next = True if call.data == "next" else False
     keyboard.flip_page(is_next=is_next)
     current_applicant_index = keyboard.get_current_applicant()
@@ -232,11 +235,17 @@ async def previous_applicant(call: types.CallbackQuery, state: FSMContext):
                                f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
                                f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
 
-    await call.message.answer(f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
-                              f"Main position: {current_portfolio.get('position')}\n"
-                              f"{portfolio_text}", parse_mode='HTML',
-                              reply_markup=keyboard.get_current_markup())
-    await call.message.delete()
+    if prev_keyboard == keyboard.get_current_markup():
+        await call.message.edit_text(f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
+                                  f"Main position: {current_portfolio.get('position')}\n"
+                                  f"{portfolio_text}", parse_mode='HTML')
+    else:
+        await call.message.edit_text(
+            f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
+            f"Main position: {current_portfolio.get('position')}\n"
+            f"{portfolio_text}", parse_mode='HTML',
+            reply_markup=(keyboard.get_current_markup()))
+    # await call.message.delete()
 
 
 @recruiter_router.callback_query(F.data == "exit", RecruiterMenuStates.applicants_displaying)

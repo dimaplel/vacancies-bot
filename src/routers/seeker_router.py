@@ -202,9 +202,13 @@ async def confirm_portfolio(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     portfolio_ref = data["portfolio_ref"]
     if not sweet_home.seeker_home.update_seeker_portfolio(seeker_profile, portfolio_ref):
-        # TODO: Handle this somehow
         logging.error("Failed to update seeker's portfolio!")
-    
+        await call.message.answer("Unexpected behaviour detected while updating your portfolio, you were returned to "
+                                  "the seeker profile menu.",
+                                  reply_markup=seeker_profile.seeker_markup.get_current_markup())
+        await call.message.delete()
+        return
+
     experiences_text = ""
     for exp in portfolio_ref.get("experiences"):
         experiences_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"

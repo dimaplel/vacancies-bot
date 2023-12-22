@@ -8,6 +8,6 @@ class UserProfileEditingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
             "update_profile_button": InlineKeyboardButton(text="Edit Profile ✅", callback_data="profile"),
-            "back_button": InlineKeyboardButton(text="Back ❌", callback_data="back")
+            "back_button": InlineKeyboardButton(text="Back ⬅️", callback_data="back")
         }
         self.update_keyboard()

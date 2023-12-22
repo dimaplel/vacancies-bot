@@ -91,7 +91,8 @@ class KeepThePreviousDescriptionInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
-            "back_button": InlineKeyboardButton(text="I changed my mind, keep the previous one", callback_data="back")
+            "back_button": InlineKeyboardButton(text="I changed my mind, keep the previous one 🔁",
+                                                callback_data="back")
         }
         self.update_keyboard()
 
@@ -110,7 +111,7 @@ class VacancyDisplayInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
             "back_button": InlineKeyboardButton(text="Go back ⬅️", callback_data="back"),
-            "delete_button": InlineKeyboardButton(text="Delete vacancy ❌", callback_data="delete"),
+            "delete_button": InlineKeyboardButton(text="Delete vacancy ♻️", callback_data="delete"),
             "applicants_button": InlineKeyboardButton(text="See applicants 👥", callback_data="applicants")
         }
         self.update_keyboard()
@@ -120,7 +121,7 @@ class DeleteVacancyOrGoBackInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
-            "delete_button": InlineKeyboardButton(text="Yes, I'm sure, delete the vacancy ❌", callback_data="confirm"),
+            "delete_button": InlineKeyboardButton(text="I'm sure, delete it ♻️", callback_data="confirm"),
             "back_button": InlineKeyboardButton(text="Go back ⬅️", callback_data="back"),
         }
         self.update_keyboard(2)
@@ -133,7 +134,7 @@ class ApplicantsListDisplayInlineKeyboard(SweetInlineKeyboardMarkup):
         self._applicants_length: int = applicants_length
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
             "previous_button": InlineKeyboardButton(text="Previous ⬅️", callback_data="back"),
-            "close_display": InlineKeyboardButton(text="Stop displaying", callback_data="exit"),
+            "close_display": InlineKeyboardButton(text="Stop displaying ❌", callback_data="exit"),
             "next_button": InlineKeyboardButton(text="Next ➡️", callback_data="next"),
         }
         self.update_keyboard()

@@ -26,7 +26,7 @@ class SeekerPortfolioEditingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
             "update_portfolio_button": InlineKeyboardButton(text="Update Portfolio ✅", callback_data="portfolio"),
-            "back_button": InlineKeyboardButton(text="Back ❌", callback_data="back")
+            "back_button": InlineKeyboardButton(text="Back to Seeker menu ⬅️", callback_data="back")
         }
         self.update_keyboard()
 
@@ -35,8 +35,8 @@ class SeekerVacancySearchingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
-            "prev_vacancy_button": InlineKeyboardButton(text="Prev <-", callback_data="prev"),
-            "next_vacancy_button": InlineKeyboardButton(text="Next ->", callback_data="next"),
-            "back_button": InlineKeyboardButton(text="Back ❌", callback_data="back")
+            "prev_vacancy_button": InlineKeyboardButton(text="Prev ⬅️", callback_data="prev"),
+            "next_vacancy_button": InlineKeyboardButton(text="Next ➡️", callback_data="next"),
+            "back_button": InlineKeyboardButton(text="Back to Seeker menu ❌", callback_data="back")
         }
         self.update_keyboard()
