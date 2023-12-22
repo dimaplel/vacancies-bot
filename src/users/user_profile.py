@@ -97,7 +97,7 @@ class UserProfile:
         return True
 
 
-    def request_recruiter_profile(self, psql_connection: PsqlConnection) -> bool:
+    def request_recruiter_profile(self, psql_connection: PsqlConnection, neo4j_connection: Neo4jConnection) -> bool:
         """
         Returns False is the recruiter profile was not set for a provided user
         Calling this method when user's recruiter profile was already set results in runtime error
@@ -117,7 +117,9 @@ class UserProfile:
 
         company_id: int = int(row['company_id'])
         recruiter_node_ref = row['recruiter_node_ref']
-        self._set_recruiter_profile(RecruiterProfile(user_id, company_id, recruiter_node_ref))
+        recruiter_profile = RecruiterProfile(user_id, company_id, recruiter_node_ref)
+        recruiter_profile.update_vacancies(psql_connection, neo4j_connection)
+        self._set_recruiter_profile(recruiter_profile)
         return True
 
 
@@ -146,6 +148,3 @@ class UserProfile:
         self.user_markup.set_button_value("recruiter_button", "Recruiter Menu 📝")
         self.user_markup.update_markup(2, 1)
         self.recruiter_ref = recruiter_profile
-
-
-

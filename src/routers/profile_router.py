@@ -98,7 +98,7 @@ async def no_prior_experience(call: types.CallbackQuery, state: FSMContext):
                               parse_mode="HTML",
                               reply_markup=user_profile.user_markup.get_current_markup())
     await call.message.delete()
-    await state.set_state(state=None)
+    await state.set_state(state=MenuStates.profile_home)
 
 
 @profile_router.message(F.text, SeekerRegistrationStates.experience_title)

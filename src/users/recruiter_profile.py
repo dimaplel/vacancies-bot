@@ -30,6 +30,28 @@ class RecruiterProfile:
         return company_registry.get_company(self._company_id)
 
 
+    def update_vacancies(self, psql_connection: PsqlConnection, neo4j_connection: Neo4jConnection) -> None:
+        vacancies_id_list = neo4j_connection.run_query("MATCH (v:Vacancy)-[:published_by]->(r:Recruiter "
+                                                       "{user_id: $user_id})"
+                                                        "RETURN DISTINCT v.vacancy_id AS vacancy_id",
+                                                       {"user_id": self._user_id})
+        vacancies_id_tuple = tuple([vid["vacancy_id"] for vid in vacancies_id_list])
+
+        vacancies_rows = psql_connection.execute_query("SELECT * FROM vacancies "
+                                                       "WHERE vacancy_id IN %s", vacancies_id_tuple)
+
+        if len(vacancies_rows) == 0:
+            logging.info(f"No vacancies were found for seeker profile {self._user_id}")
+            return
+
+        self._cached_vacancies: dict[int, Vacancy] = {}
+        for vacancy in vacancies_rows:
+            self._cached_vacancies[vacancy["vacancy_id"]] = Vacancy(vacancy["vacancy_id"],
+                                                                    self._user_id,
+                                                                    vacancy["vacancy_doc_ref"])
+
+        logging.info(f"Updated vacancies cache: {self._cached_vacancies}")
+
     def add_vacancy(self, psql_connection: PsqlConnection, mongodb_connection: MongoDBConnection,
                     neo4j_connection: Neo4jConnection, redis_connection: RedisConnection,
                     company_registry: CompanyRegistry, vacancy_data: dict) -> None:
@@ -78,7 +100,9 @@ class RecruiterProfile:
 
 
     def get_vacancy_applicants(self, neo4j_connection: Neo4jConnection, vacancy_id: int):
-        return self._cached_vacancies[vacancy_id].get_applicants(neo4j_connection)
+        if self._cached_vacancies is not None:
+            return self._cached_vacancies[vacancy_id].get_applicants(neo4j_connection)
+        return []
 
 
     def _add_vacancy_to_cache(self, vacancy: Vacancy) -> None:

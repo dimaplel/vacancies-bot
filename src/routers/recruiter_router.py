@@ -77,7 +77,7 @@ async def back_to_menu(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(MenuStates.recruiter_home)
 
 
-@recruiter_router.message(F.text.regexp(r'^[1-9]\d*$'), RecruiterMenuStates.choose_vacancy)
+@recruiter_router.message(F.text.regexp(r'^(0|[1-9]\d*)$'), RecruiterMenuStates.choose_vacancy)
 async def vacancy_display(message: types.Message, state: FSMContext):
     data = await state.get_data()
     vacancies = data["vacancies"]
@@ -147,7 +147,7 @@ async def delete_vacancy(call: types.CallbackQuery, state: FSMContext):
     chosen_vacancy = data["chosen_vacancy"]
     sweet_home.recruiter_home.delete_vacancy(recruiter_profile, chosen_vacancy)
 
-    await call.message.answer(f"Your vacancy for '{chosen_vacancy[1]['positions']}' was permanently deleted!",
+    await call.message.answer(f"Your vacancy for '{chosen_vacancy[1]['position']}' was permanently deleted!",
                               reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
 
     await call.message.delete()
@@ -165,6 +165,8 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
     chosen_vacancy = data["chosen_vacancy"]
 
     applicants_id_list = sweet_home.recruiter_home.get_vacancy_applicants(recruiter_profile, chosen_vacancy[0])
+    user_profiles_list = [sweet_home.request_user_profile(uid) for uid in applicants_id_list
+                          if sweet_home.request_user_profile(uid) is not None]
     if len(applicants_id_list) == 0:
         await call.message.answer("This vacancy has no applicants.",
                                   reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
@@ -173,10 +175,20 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
         await state.set_state(MenuStates.recruiter_home)
         return
 
-    user_profiles_list = [sweet_home.request_user_profile(uid) for uid in applicants_id_list]
+    logging.info(f"Retrieved applicants with ids: {applicants_id_list}")
+
+    if len(user_profiles_list) == 0:
+        await call.message.answer("Applicants don't have a valid seeker profile and cannot be viewed properly.",
+                                  reply_markup=recruiter_profile.recruiter_markup.get_current_markup())
+        await call.message.delete()
+        await state.set_data({})
+        await state.set_state(MenuStates.recruiter_home)
+        return
 
     current_applicant_profile = user_profiles_list[0]
     current_portfolio = sweet_home.seeker_home.request_seeker_portfolio(current_applicant_profile.seeker_ref)
+    logging.info(f"Retrieved portfolio for user with id {current_applicant_profile.get_id()}: {current_portfolio}")
+
     telegram_profile = await GetChatMember(chat_id=current_applicant_profile.get_id(),
                                      user_id=current_applicant_profile.get_id()).as_(bot)
     keyboard = ApplicantsListDisplayInlineKeyboard(len(user_profiles_list))
@@ -201,7 +213,8 @@ async def display_applicants(call: types.CallbackQuery, state: FSMContext):
 async def previous_applicant(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     keyboard: ApplicantsListDisplayInlineKeyboard = data.get("keyboard")
-    keyboard.flip_page(is_next=False if F.data == "back" else True)
+    is_next = True if call.data == "next" else False
+    keyboard.flip_page(is_next=is_next)
     current_applicant_index = keyboard.get_current_applicant()
 
     current_applicant_profile = data.get("applicant_profiles")[current_applicant_index]
@@ -209,15 +222,18 @@ async def previous_applicant(call: types.CallbackQuery, state: FSMContext):
     telegram_profile = await GetChatMember(chat_id=current_applicant_profile.get_id(),
                                            user_id=current_applicant_profile.get_id()).as_(bot)
 
-    portfolio_text = ""
-    for exp in current_portfolio.get("experiences"):
-        portfolio_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
-                           f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
-                           f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
+    experiences = current_portfolio.get("experiences")
+    if len(experiences) == 0:
+        portfolio_text = "Has no prior experience."
+    else:
+        portfolio_text = "Past experiences:\n\n"
+        for exp in experiences:
+            portfolio_text += (f"{Bold('— Title: ').as_html()} {exp['title']}\n"
+                               f"{Bold('— Description: ').as_html()} {exp['desc']}\n"
+                               f"{Bold('— Duration').as_html()} {exp['timeline']}\n\n")
 
     await call.message.answer(f"{telegram_profile.user.mention_html(current_applicant_profile.get_full_name())}\n\n"
                               f"Main position: {current_portfolio.get('position')}\n"
-                              f"Past experiences:\n\n"
                               f"{portfolio_text}", parse_mode='HTML',
                               reply_markup=keyboard.get_current_markup())
     await call.message.delete()

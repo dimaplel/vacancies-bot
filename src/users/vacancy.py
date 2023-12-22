@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any
 from src.connections import PsqlConnection, MongoDBConnection, Neo4jConnection
 
@@ -29,7 +30,7 @@ class Vacancy:
         if len(applicants_id_list) == 0:
             return applicants_id_list
 
-        return applicants_id_list[0]["user_id_list"]
+        return [node["user_id_list"] for node in applicants_id_list]
 
     
 

@@ -110,7 +110,8 @@ class ProfileHome:
 
     
     def request_recruiter_profile(self, user_profile: UserProfile) -> bool:
-        return user_profile.request_recruiter_profile(self._sweet_connections.sql_connection)
+        return user_profile.request_recruiter_profile(self._sweet_connections.sql_connection,
+                                                      self._sweet_connections.neo4j_connection)
 
     
     def add_recruiter_profile(self, user_profile: UserProfile, company_id: int):
@@ -332,7 +333,8 @@ class SweetHome:
             logging.info("Could not set a seeker profile for user with id %d", user_id)
             logging.info("Registration of the seeker profile will be required")
 
-        if not user_profile.request_recruiter_profile(self._sweet_connections.sql_connection):
+        if not user_profile.request_recruiter_profile(self._sweet_connections.sql_connection,
+                                                      self._sweet_connections.neo4j_connection):
             logging.info("Could not set a recruiter profile for user with id %d", user_id)
             logging.info("Registration of the recruiter profile will be required")
 

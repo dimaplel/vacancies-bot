@@ -150,6 +150,7 @@ class ApplicantsListDisplayInlineKeyboard(SweetInlineKeyboardMarkup):
         if self._cur_applicant != self._applicants_length - 1:
             builder.add(self._keyboard_buttons.get("next_button"))
 
+        self._keyboard_markup = builder.adjust(3).as_markup()
         return self.get_current_markup()
 
 
