@@ -73,7 +73,7 @@ class RecruiterProfile:
     def get_vacancies_data(self, psql_connection:PsqlConnection, mongodb_connection: MongoDBConnection):
         vacancies_rows = psql_connection.execute_query("SELECT vacancy_doc_ref, vacancy_id FROM vacancies "
                                                           "WHERE recruiter_id = %s",self._user_id)
-        if len(vacancies_rows) == 0:
+        if vacancies_rows is None or len(vacancies_rows) == 0:
             return None
 
         vacancies_doc_refs = [row["vacancy_doc_ref"] for row in vacancies_rows if row["vacancy_doc_ref"] is not None]

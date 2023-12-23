@@ -32,6 +32,28 @@ class Vacancy:
 
         return [node["user_id_list"] for node in applicants_id_list]
 
+
+    def filter_suitable(self, salary: tuple[int, int], position_regex, mongodb_connection: MongoDBConnection) -> bool:
+        data = self.get_vacancy_data(mongodb_connection)
+        # Shouldnt happen
+        if data is None:
+            logging.error(f"Data is none for vacancy {self.get_id()}")
+            return False
+
+        data_salary = data['salary']
+        data_position = data['position']
+
+        is_suitable = True
+        if salary is not None:
+            min_salary, max_salary = salary
+            if not (min_salary <= data_salary <= max_salary):
+                is_suitable = False
+
+        if position_regex is not None and position_regex.search(data_position) is None:
+            is_suitable = False
+
+        return is_suitable
+
     
 
 class VacanciesChunk:

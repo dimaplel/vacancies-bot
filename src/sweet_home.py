@@ -7,7 +7,7 @@ from connections import PsqlConnection, Neo4jConnection, RedisConnection, MongoD
 from users.user_profile import UserProfile
 from users.seeker_profile import SeekerProfile
 from users.recruiter_profile import RecruiterProfile
-from users.vacancy import Vacancy, VacanciesChunk
+from users.vacancy import Vacancy
 from src.users.company_registry import CompanyRegistry
 
 
@@ -154,9 +154,6 @@ class SeekerHome:
 
     def create_search_context(self, seeker_profile: SeekerProfile) -> bool:
         """
-        if less than 0 - decrements
-        if more than 0 - increments
-        if 0 - no operations. Search context will be created if not created yet
         False if not valid seeker or failed operation
         """
         if seeker_profile is None:
@@ -194,6 +191,10 @@ class RecruiterHome:
                                       self._sweet_connections.neo4j_connection,
                                       self._sweet_connections.redis_connection, self._company_registry,
                                       vacancy_data)
+
+
+    def get_vacancy_data(self, vacancy: Vacancy):
+        return vacancy.get_vacancy_data(self._sweet_connections.mongodb_connection)
 
 
     def get_vacancies_data(self, recruiter_profile: RecruiterProfile):

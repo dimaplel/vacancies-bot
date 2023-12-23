@@ -68,8 +68,6 @@ async def seeker_home(message: types.Message, state: FSMContext):
         await state.set_state(MenuStates.profile_home)
         
 
-
-
 @seeker_router.callback_query(F.data == "portfolio", MenuStates.seeker_profile_editing)
 async def on_portfolio_edit(call: types.CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
@@ -246,6 +244,11 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(SeekerPortfolioUpdateStates.experience_title)
 
 
+def get_vacancy_message(vacancy) -> str:
+    data = sweet_home.recruiter_home.get_vacancy_data(vacancy)
+    return f"Vacancy is: {vacancy.get_id()} - {data['position']} with annual salary of ${data['salary']}"
+    
+
 @seeker_router.callback_query(F.data == "prev", MenuStates.seeker_vacancy_search)
 async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
     seeker_profile = get_seeker_profile(call.from_user.id)
@@ -259,7 +262,8 @@ async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
         logging.error("Failed to decrement")
 
     vacancy = vsc.get_current_vacancy()
-    await call.message.answer(f"Vacancy is: {vacancy.get_id()}", 
+    await call.message.answer(
+        get_vacancy_message(vacancy), 
         reply_markup=vsc.inline_markup.get_current_markup())
     await call.message.delete()
 
@@ -291,7 +295,8 @@ async def on_next_pressed_search(call: types.CallbackQuery, state: FSMContext):
         logging.error("Failed to decrement")
 
     vacancy = vsc.get_current_vacancy()
-    await call.message.answer(f"Vacancy is: {vacancy.get_id()}", 
+    await call.message.answer(
+        get_vacancy_message(vacancy), 
         reply_markup=vsc.inline_markup.get_current_markup())
     await call.message.delete()
 
@@ -375,8 +380,8 @@ async def on_vacancy_filters_back(call: types.CallbackQuery, state: FSMContext):
         return
 
     await call.message.answer(
-        f"Successfully found vacancies matching specified filters (if any).\n"
-        f"First vacancy {first_vacancy.get_id()}",
+        f"Successfully found vacancies matching specified filters (if any). Here are the vacancies:\n" +
+        get_vacancy_message(first_vacancy),
         reply_markup=vsc.inline_markup.get_current_markup())
     await call.message.delete()
     await state.set_state(MenuStates.seeker_vacancy_search)

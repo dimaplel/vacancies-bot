@@ -42,7 +42,7 @@ async def recruiter_home(message: types.Message, state: FSMContext):
 
     elif message.text == recruiter_markup.get_button_text("your_vacancies_button"):
         vacancies = sweet_home.recruiter_home.get_vacancies_data(recruiter_profile)
-        if len(vacancies) == 0:
+        if vacancies is None or len(vacancies) == 0:
             await message.answer("You have no vacancies yet. You can create one in the recruiter menu.",
                                  reply_markup=recruiter_markup.get_current_markup())
             return
