@@ -34,9 +34,34 @@ class SeekerPortfolioEditingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
 class SeekerVacancySearchingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
     def __init__(self):
         super().__init__()
+        self._toggleable_keyboard_buttons: dict[str, (bool, InlineKeyboardButton)] = {
+            "prev_vacancy_button":  (True, InlineKeyboardButton(text="Prev ⬅️", callback_data="prev")),
+            "back_button":          (True, InlineKeyboardButton(text="Back ❌", callback_data="back")),
+            "next_vacancy_button":  (True, InlineKeyboardButton(text="Next ➡️", callback_data="next")),
+        }
+        self.update_keyboard()
+
+    
+    def update_keyboard(self, *sizes) -> InlineKeyboardMarkup:
+        self._keyboard_buttons = {}
+        for key, (toggled, button) in self._toggleable_keyboard_buttons.items():
+            if toggled:
+                self._keyboard_buttons[key] = button
+
+        return super().update_keyboard(*sizes)
+
+    
+    def toggle_button(self, button: str, val: bool):
+        tup = self._toggleable_keyboard_buttons[button]
+        self._toggleable_keyboard_buttons[button] = (val, tup[1])
+
+
+class SeekerVacacnyFiltersInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__()
         self._keyboard_buttons: dict[str, InlineKeyboardButton] = {
-            "prev_vacancy_button": InlineKeyboardButton(text="Prev ⬅️", callback_data="prev"),
-            "next_vacancy_button": InlineKeyboardButton(text="Next ➡️", callback_data="next"),
-            "back_button": InlineKeyboardButton(text="Back to Seeker menu ❌", callback_data="back")
+            "filter_salary":    InlineKeyboardButton(text="Enter salary", callback_data="filter_salary"),
+            "filter_position":  InlineKeyboardButton(text="Enter position", callback_data="filter_position"),
+            "done_button":      InlineKeyboardButton(text="Done", callback_data="done"),
         }
         self.update_keyboard()

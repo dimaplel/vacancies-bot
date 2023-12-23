@@ -137,116 +137,6 @@ class ProfileHome:
 class SeekerHome:
     def __init__(self, sweet_connections: SweetConnections):
         self._sweet_connections = sweet_connections
-        self._vacancies_search_contexts: Dict[int, 'SeekerHome.VacanciesSearchContext'] = {}
-
-
-    class VacanciesSearchContext:
-        def __init__(self, sweet_connections: SweetConnections, chunk_limit: int):
-            self._sweet_connections = sweet_connections
-            self._chunk_limit = chunk_limit
-            self._chunk_offset = 0
-            self._curr_chunk = VacanciesChunk(self._chunk_limit, self._chunk_offset)
-            self._curr_chunk.query_chunk(sweet_connections.sql_connection)
-            self._vacancy_idx = 0
-
-        
-        def increment_vacancy_index(self) -> bool:
-            """
-            Returns False if cannot increment. No changes if cannot increment
-            Otherwise increments the vacancy index and returns True
-            """
-            vacancy_idx = self._vacancy_idx + 1
-            idx_upper_bound = self._chunk_limit * (self._chunk_offset + 1)
-
-            # No need to check lower boundary as we should never meet that case
-            if vacancy_idx >= idx_upper_bound:
-                chunk_offset = self._chunk_offset + 1
-                chunk = VacanciesChunk(self._chunk_limit, chunk_offset)
-                vacancies = chunk.query_chunk(self._sweet_connections.sql_connection)
-                if len(vacancies) == 0:
-                    # Cannot increment
-                    return False
-
-                # Else - we can increment
-                self._chunk_offset = chunk_offset
-                self._curr_chunk = chunk
-
-            # Perform checks once again to ensure we are not out of boundaries
-            vacancies = self._curr_chunk.get_current_chunk()
-            if len(vacancies) == 0:
-                # Cannot increment
-                return False
-
-            self._vacancy_idx = vacancy_idx
-            return True
-
-        
-        def decrement_vacancy_index(self) -> bool:
-            """
-            Returns False if cannot decrement. No changes if cannot.
-            Otherwise decrements and returns True.
-            """
-            vacancy_idx = self._vacancy_idx - 1
-            if vacancy_idx < 0:
-                return False
-
-            idx_lower_bound = self._chunk_limit * self._chunk_offset
-            if vacancy_idx < idx_lower_bound:
-                chunk_offset = self._chunk_offset - 1
-                chunk = VacanciesChunk(self._chunk_limit, chunk_offset)
-                vacancies = chunk.query_chunk(self._sweet_connections.sql_connection)
-                # If we get 0 here, we should decrement even more as vacancies may have been deleted
-                if len(vacancies) == 0:
-                    if self._vacancy_idx == 0:
-                        return False
-
-                    # This is expensive but who cares
-                    return self.decrement_vacancy_index()
-
-                self._chunk_offset = chunk_offset
-                self._curr_chunk = chunk
-                
-            vacancies = self._curr_chunk.get_current_chunk()
-            if len(vacancies) == 0:
-                return False
-
-            self._vacancy_idx = vacancy_idx
-            return True
-
-
-        def get_current_vacancy(self) -> (Vacancy | None):
-            local_idx = self._vacancy_idx % self._chunk_limit
-            vacancies = self._curr_chunk.get_current_chunk()
-            # Out of range
-            if local_idx >= len(vacancies):
-                return None
-                
-            return vacancies[local_idx]
-
-
-    def add_search_context(self, user_id: int):
-        # Check first before adding
-        vsc = self.get_search_context(user_id)
-        if vsc is not None:
-            return vsc
-            
-        self._vacancies_search_contexts[user_id] = self.VacanciesSearchContext(
-            sweet_connections=self._sweet_connections, 
-            chunk_limit=5
-        )
-        return self._vacancies_search_contexts[user_id]
-
-
-    def get_search_context(self, user_id: int):
-        return self._vacancies_search_contexts.get(user_id)
-
-
-    def remove_search_context(self, user_id: int) -> bool:
-        if user_id in self._vacancies_search_contexts:
-            del self._vacancies_search_contexts[user_id]
-            return True
-
-        return False
 
 
     def request_seeker_profile(self, user_profile: UserProfile) -> bool:
@@ -260,6 +150,21 @@ class SeekerHome:
 
     def update_seeker_portfolio(self, seeker_profile: SeekerProfile, portfolio: Dict[str, Any]) -> bool:
         return seeker_profile.update_portfolio(self._sweet_connections.mongodb_connection, portfolio)
+
+
+    def create_search_context(self, seeker_profile: SeekerProfile) -> bool:
+        """
+        if less than 0 - decrements
+        if more than 0 - increments
+        if 0 - no operations. Search context will be created if not created yet
+        False if not valid seeker or failed operation
+        """
+        if seeker_profile is None:
+            return False
+
+        seeker_profile.add_search_context(self._sweet_connections.sql_connection, self._sweet_connections.mongodb_connection)
+        return True
+        
 
 
 class RecruiterHome:

@@ -55,7 +55,7 @@ class UserProfile:
         """
         We assert that company_id is a valid ID of a company in sql "companies" table
         """
-        assert not self.request_recruiter_profile(psql_connection)
+        assert not self.request_recruiter_profile(psql_connection, neo4j_connection)
         user_id = self.get_id()
         result = neo4j_connection.run_query("MERGE (r:Recruiter {user_id: $user_id}) RETURN ID(r) AS recruiter_id",
                                             {"user_id": user_id})

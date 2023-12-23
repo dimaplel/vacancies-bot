@@ -15,7 +15,8 @@ from src.keyboards.recruiter_inline_keyboards import (ConfirmOrChangeDescription
                                                       KeepThePreviousDescriptionInlineKeyboardMarkup,
                                                       VacancyDisplayInlineKeyboardMarkup,
                                                       DeleteVacancyOrGoBackInlineKeyboardMarkup,
-                                                      ApplicantsListDisplayInlineKeyboard)
+                                                      ApplicantsListDisplayInlineKeyboard,
+                                                      GoBackInlineKeyboardMarkup)
 
 
 recruiter_router = Router(name="Recruiter Router")
@@ -54,7 +55,8 @@ async def recruiter_home(message: types.Message, state: FSMContext):
 
         await message.answer(f"{Bold('Your vacancies:').as_html()}\n\n"
                              f"{vacancies_text}\n"
-                             f"Choose vacancy to display by typing its index.", parse_mode='HTML')
+                             f"Choose vacancy to display by typing its index.\n", parse_mode='HTML', 
+                             reply_markup=GoBackInlineKeyboardMarkup().get_current_markup())
         await state.set_state(RecruiterMenuStates.choose_vacancy)
 
     elif message.text == recruiter_markup.get_button_text("back_button"):

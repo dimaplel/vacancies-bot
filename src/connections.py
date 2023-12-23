@@ -235,6 +235,9 @@ class MongoDBConnection:
             document = collection.find_one({"_id": ObjectId(doc_id)})
             if document:
                 print(f"Retrieved document with ID {doc_id} from MongoDB: {document}")
+            else:
+                logging.error(f"Failed to retrieve document with ID {doc_id} from MongoDB!")
+                
             return document
         except Exception as e:
             logging.error(f"Error getting document from MongoDB: {e}")

@@ -1,4 +1,5 @@
 import logging
+import re
 
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
@@ -12,11 +13,19 @@ from src.sweet_home import sweet_home
 
 from src.keyboards.seeker_inline_keyboards import (NoExperienceInlineKeyboardMarkup, 
                                                 SeekerPortfolioEditingInlineKeyboardMarkup, 
-                                                PortfolioAdditionInlineKeyboardMarkup,
-                                                SeekerVacancySearchingInlineKeyboardMarkup)
+                                                SeekerVacacnyFiltersInlineKeyboardMarkup, 
+                                                PortfolioAdditionInlineKeyboardMarkup)
 
 
 seeker_router = Router(name="Seeker Router")
+
+
+def get_seeker_profile(user_id: int) -> SeekerProfile:
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    
+    seeker_profile: SeekerProfile = user_profile.seeker_ref
+    assert seeker_profile is not None
+    return seeker_profile
 
 
 @seeker_router.message(F.text, MenuStates.seeker_home)
@@ -35,29 +44,31 @@ async def seeker_home(message: types.Message, state: FSMContext):
         await state.set_state(MenuStates.seeker_profile_editing)
 
     elif message.text == seeker_markup.get_button_text("search_vacancies_button"):
-        vsc = sweet_home.seeker_home.add_search_context(user_id)
-        if vsc is None:
-            await message.answer("Failed to request valid vacancy search context",
-                reply_markup=seeker_profile.seeker_markup.get_current_markup())
-            await state.set_state(MenuStates.seeker_home)
-            return
+        res = sweet_home.seeker_home.create_search_context(seeker_profile)
+        assert res
 
-        first_vacancy = vsc.get_current_vacancy()
-        if first_vacancy is None:
+        vsc = seeker_profile.vacancies_search_context
+        if vsc.empty_context:
             await message.answer("There is no vacancies here!",
                 reply_markup=seeker_profile.seeker_markup.get_current_markup())
             await state.set_state(MenuStates.seeker_home)
             return
 
-        await message.answer(f"Welcome to vacancies search. First vacancy is: {first_vacancy.get_id()}", 
-            reply_markup=SeekerVacancySearchingInlineKeyboardMarkup().get_current_markup())
-        await state.set_state(MenuStates.seeker_vacancy_search)
+        await message.answer(
+            "Welcome to vacancies search. Do you want to enter filters before entering the search?\n"
+            "You can enter the desired annual salary by entering the range (For example \"5000, 10000\")",
+            reply_markup=SeekerVacacnyFiltersInlineKeyboardMarkup().get_current_markup())
+        await state.set_data({})
+        await state.set_state(MenuStates.seeker_vacancy_filters)
     
     elif message.text == seeker_markup.get_button_text("back_button"):
         await message.answer("Returning back to user profile menu", 
             reply_markup=user_profile.user_markup.get_current_markup())
+        await state.set_data({})
         await state.set_state(MenuStates.profile_home)
         
+
+
 
 @seeker_router.callback_query(F.data == "portfolio", MenuStates.seeker_profile_editing)
 async def on_portfolio_edit(call: types.CallbackQuery, state: FSMContext):
@@ -233,3 +244,139 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
                          f"Enter your experience title {Italic('For instance: Developer at ABC Inc.').as_html()}",
                          parse_mode="HTML")
     await state.set_state(SeekerPortfolioUpdateStates.experience_title)
+
+
+@seeker_router.callback_query(F.data == "prev", MenuStates.seeker_vacancy_search)
+async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
+    seeker_profile = get_seeker_profile(call.from_user.id)
+    vsc = seeker_profile.vacancies_search_context
+    assert vsc is not None
+
+    data = await state.get_data()
+    desired_salary: (tuple[int, int] | None) = data.get('desired_salary')
+    desired_position = data.get('desired_position')
+    if not vsc.jump_prev_vacancy_with_filters(desired_salary, desired_position):
+        logging.error("Failed to decrement")
+
+    vacancy = vsc.get_current_vacancy()
+    await call.message.answer(f"Vacancy is: {vacancy.get_id()}", 
+        reply_markup=vsc.inline_markup.get_current_markup())
+    await call.message.delete()
+
+
+@seeker_router.callback_query(F.data == "back", MenuStates.seeker_vacancy_search)
+async def on_back_pressed_search(call: types.CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
+    
+    seeker_profile: SeekerProfile = user_profile.seeker_ref
+    assert seeker_profile is not None
+
+    await call.message.answer("Returning back to seeker home", 
+        reply_markup=seeker_profile.seeker_markup.get_current_markup())
+    await call.message.delete()
+    await state.set_state(MenuStates.seeker_home)
+
+
+@seeker_router.callback_query(F.data == "next", MenuStates.seeker_vacancy_search)
+async def on_next_pressed_search(call: types.CallbackQuery, state: FSMContext):
+    seeker_profile = get_seeker_profile(call.from_user.id)
+    vsc = seeker_profile.vacancies_search_context
+    assert vsc is not None
+
+    data = await state.get_data()
+    desired_salary: (tuple[int, int] | None) = data.get('desired_salary')
+    desired_position = data.get('desired_position')
+    if not vsc.jump_next_vacancy_with_filters(desired_salary, desired_position):
+        logging.error("Failed to decrement")
+
+    vacancy = vsc.get_current_vacancy()
+    await call.message.answer(f"Vacancy is: {vacancy.get_id()}", 
+        reply_markup=vsc.inline_markup.get_current_markup())
+    await call.message.delete()
+
+
+@seeker_router.callback_query(F.data == "filter_salary", MenuStates.seeker_vacancy_filters)
+async def on_vacancy_filters_salary(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer("Enter the desired annual salary by entering the range (For example \"5000, 10000\")")
+    await call.message.delete()
+    await state.set_state(MenuStates.seeker_vacancy_filters_salary)
+
+
+salary_regex = r"(\d+)\s*,\s*(\d+)"
+@seeker_router.message(F.text.regexp(salary_regex), MenuStates.seeker_vacancy_filters_salary)
+async def on_salary_filter_message(message: types.Message, state: FSMContext):
+    # The regex groups (min_salary and max_salary) are captured and can be accessed
+    match = re.match(salary_regex, message.text)
+    if not match:
+        logging.error(f"Failed to parse salary for message \"{message.text}\"!")
+        await message.answer("Failed to parse salary. Enter the desired annual salary in format \"5000, 10000\")")
+        return
+
+    min_salary, max_salary = map(int, match.groups())
+
+    await message.answer(
+        f"Salary range set to: {min_salary} - {max_salary}",
+        reply_markup=SeekerVacacnyFiltersInlineKeyboardMarkup().get_current_markup())
+    await message.delete()
+    await state.update_data(desired_salary = (min_salary, max_salary))
+    await state.set_state(MenuStates.seeker_vacancy_filters)
+
+
+@seeker_router.callback_query(F.data == "filter_position", MenuStates.seeker_vacancy_filters)
+async def on_vacancy_filters_position(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer("Enter the desired position (For example \"C++ Developer\" or just \"C++\")")
+    await call.message.delete()
+    await state.set_state(MenuStates.seeker_vacancy_filters_position)
+
+
+@seeker_router.message(F.text, MenuStates.seeker_vacancy_filters_position)
+async def on_position_filter_message(message: types.Message, state: FSMContext):
+    desired_position = message.text;
+    await message.answer(
+        f"Desired position is set to: {desired_position}",
+        reply_markup=SeekerVacacnyFiltersInlineKeyboardMarkup().get_current_markup())
+    await message.delete()
+    await state.update_data(desired_position=desired_position)
+    await state.set_state(MenuStates.seeker_vacancy_filters)
+
+
+@seeker_router.callback_query(F.data == "done", MenuStates.seeker_vacancy_filters)
+async def on_vacancy_filters_back(call: types.CallbackQuery, state: FSMContext):
+    seeker_profile = get_seeker_profile(call.from_user.id)
+    vsc = seeker_profile.vacancies_search_context
+    
+    # Filters
+    data = await state.get_data()
+    desired_salary: (tuple[int, int] | None) = data.get('desired_salary')
+    desired_position = data.get('desired_position')
+
+    logging.info(f"Filters are {desired_salary}, {desired_position}")
+
+    # We need to manually check if FIRST vacancy is suitable!
+    position_regex = None
+    if desired_position is not None:
+        position_regex = re.compile(re.escape(desired_position), re.IGNORECASE)
+
+    first_vacancy = None
+    if vsc.is_current_vacancy_by_filters(desired_salary, position_regex):
+        logging.info("Picked current vacancy as it is filtered already")
+        first_vacancy = vsc.get_current_vacancy()
+    elif vsc.jump_next_vacancy_with_filters(desired_salary, desired_position):
+        logging.info("Jumped from first to filtered")
+        first_vacancy = vsc.get_current_vacancy()
+
+    if first_vacancy is None:
+        await call.message.answer(
+            "There is no vacancies that would match your filters. Returning back to seeker home menu",
+            reply_markup=seeker_profile.seeker_markup.get_current_markup())
+        await call.message.delete()
+        await state.set_state(MenuStates.seeker_home)
+        return
+
+    await call.message.answer(
+        f"Successfully found vacancies matching specified filters (if any).\n"
+        f"First vacancy {first_vacancy.get_id()}",
+        reply_markup=vsc.inline_markup.get_current_markup())
+    await call.message.delete()
+    await state.set_state(MenuStates.seeker_vacancy_search)
