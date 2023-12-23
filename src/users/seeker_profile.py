@@ -61,34 +61,29 @@ class VacanciesSearchContext:
         
         while self.jump_vacancy(step):
             if self.is_current_vacancy_by_filters(salary, position_regex):
-                self.inline_markup.toggle_button("prev_vacancy_button", self._has_neighbor_vacancy_with_filters(-1, salary, position))
-                self.inline_markup.toggle_button("next_vacancy_button", self._has_neighbor_vacancy_with_filters(1, salary, position))
+                self.inline_markup.toggle_button("prev_vacancy_button", self._has_neighbor_vacancy_with_filters(-1, salary, position_regex))
+                self.inline_markup.toggle_button("next_vacancy_button", self._has_neighbor_vacancy_with_filters(1, salary, position_regex))
                 self.inline_markup.update_keyboard()
                 return True
 
         return False
 
 
-    def _has_neighbor_vacancy_with_filters(self, step: int, salary: tuple[int, int], position: str) -> bool:
-        if salary is None and position is None:
+    def _has_neighbor_vacancy_with_filters(self, step: int, salary: tuple[int, int], position_regex) -> bool:
+        if salary is None and position_regex is None:
             able, _ = self._has_neighbor_vacancy(step)
             return able
 
         if step == 0:
             return False
 
-        # Escape special characters in the phrase and create a case-insensitive regex
-        position_regex = None
-        if position is not None:
-            position_regex = re.compile(re.escape(position), re.IGNORECASE)
-
         step = -1 if step < 0 else 1
         current_step = step
         able, chunk = self._has_neighbor_vacancy(current_step)
         while able:
             current_idx = self._vacancy_idx + current_step
-            local_idx = current_idx % self._chunk_limit
             query_chunk = self._curr_chunk
+            local_idx = current_idx % self._chunk_limit
             if chunk is not None:
                 query_chunk = chunk
 
@@ -146,19 +141,19 @@ class VacanciesSearchContext:
 
         idx_upper_bound = self._chunk_limit * (self._chunk_offset + 1)
         idx_lower_bound = self._chunk_limit * self._chunk_offset
+        local_idx = vacancy_idx % self._chunk_limit
         # If we are in the EXPECTED bounds of chunk we should check if there are enough vacancies
         if idx_lower_bound <= vacancy_idx < idx_upper_bound:
             # Perform checks once again to ensure we are not out of boundaries
             # We want to check if length of vacancies is larger than our new vacancy index
             vacancies = self._curr_chunk.get_current_chunk()
-            local_idx = vacancy_idx % self._chunk_limit
             if local_idx >= len(vacancies):
                 # Cannot increment
                 return False, None
             
             return True, None
         else: # if ![idx_lower, idx_upper) we need to query a chunk
-            chunk_offset = vacancy_idx / self._chunk_limit
+            chunk_offset = vacancy_idx // self._chunk_limit
             assert chunk_offset >= 0
 
             chunk = VacanciesChunk(self._chunk_limit, chunk_offset)
@@ -166,7 +161,7 @@ class VacanciesSearchContext:
 
             # We are at beginning of the chunk. Check if there are any vacancies at all.
             # If there are no vacancies - return False, as we cannot increment
-            if len(vacancies) == 0:
+            if local_idx >= len(vacancies):
                 # Cannot increment/decrement
                 # NOTICE: If vacancies were removed during DECREMENT search operation and the chunk
                 # is no longer valid - this will result in undefined state
@@ -199,16 +194,18 @@ class VacanciesSearchContext:
         if step == 0:
             return False
 
-        step = -1 if step < 0 else 1
+        # we want any step
+        # step = -1 if step < 0 else 1
         able, chunk = self._has_neighbor_vacancy(step)
         if not able:
             return False
 
         self._vacancy_idx = self._vacancy_idx + step
         if chunk is not None:
-            self._chunk_offset = self._chunk_offset + step
+            self._chunk_offset = self._vacancy_idx // self._chunk_limit
             self._curr_chunk = chunk
 
+        # logging.info(f"Current vacancy {self._vacancy_idx} with chunk {self._chunk_offset}")
         self.inline_markup.toggle_button("prev_vacancy_button", self.has_prev_vacancy())
         self.inline_markup.toggle_button("next_vacancy_button", self.has_next_vacancy())
         self.inline_markup.update_keyboard()
