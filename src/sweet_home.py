@@ -135,8 +135,9 @@ class ProfileHome:
 
 
 class SeekerHome:
-    def __init__(self, sweet_connections: SweetConnections):
+    def __init__(self, sweet_connections: SweetConnections, company_registry: CompanyRegistry):
         self._sweet_connections = sweet_connections
+        self._company_registry = company_registry
 
 
     def request_seeker_profile(self, user_profile: UserProfile) -> bool:
@@ -161,8 +162,15 @@ class SeekerHome:
 
         seeker_profile.add_search_context(self._sweet_connections.sql_connection, self._sweet_connections.mongodb_connection)
         return True
-        
 
+
+    def add_applicant(self, vacancy:Vacancy, seeker_profile: SeekerProfile) -> bool:
+        return vacancy.add_applicant(seeker_profile.get_seeker_node_ref(), self._sweet_connections.neo4j_connection)
+
+
+    def get_company_registry(self) -> CompanyRegistry:
+        return self._company_registry
+        
 
 class RecruiterHome:
     def __init__(self, sweet_connections: SweetConnections, company_registry: CompanyRegistry):
@@ -214,7 +222,7 @@ class SweetHome:
                                                  self._sweet_connections.redis_connection)
         self._user_cache: dict[int, UserProfile] = {}
         self.profile_home = ProfileHome(sweet_connections, self._company_registry)
-        self.seeker_home = SeekerHome(sweet_connections)
+        self.seeker_home = SeekerHome(sweet_connections, self._company_registry)
         self.recruiter_home = RecruiterHome(sweet_connections, self._company_registry)
 
 

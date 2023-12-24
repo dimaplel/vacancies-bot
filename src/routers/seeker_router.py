@@ -246,11 +246,36 @@ async def add_more_experience(call: types.CallbackQuery, state: FSMContext):
 
 def get_vacancy_message(vacancy) -> str:
     data = sweet_home.recruiter_home.get_vacancy_data(vacancy)
-    return f"Vacancy is: {vacancy.get_id()} - {data['position']} with annual salary of ${data['salary']}"
+
+    logging.info(f"data is {data}")
+    company_id = int(data['company'])
+    company_registry = sweet_home.seeker_home.get_company_registry()
+    company = company_registry.get_company(company_id)
+    assert company is not None
+
+    metrics = company_registry.get_metrics(company_id)
+    description = data['description']
+
+    msg = \
+    f"<b>{data['position']} with annual salary of ${data['salary']}</b>\n\n"\
+    f"<b>Description</b>: {description}\n\n"\
+    f"<b>Company</b>: {company.name}\n"\
+    f"<i>It has {metrics['employees']} employees registered</i>\n"\
+    f"<i>It has {metrics['open_vacancies']} open vacancies on the service</i>\n"
+    return msg
     
 
-@seeker_router.callback_query(F.data == "prev", MenuStates.seeker_vacancy_search)
-async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
+async def post_vacancy_answer(message: types.Message, vacancy, markup, prefix: str = ""):
+    await message.answer(
+        prefix + 
+        "Current vacancy:\n" + 
+        get_vacancy_message(vacancy), 
+        reply_markup=markup, 
+        parse_mode="HTML")
+    await message.delete()
+
+
+async def jump_with_filters(step, call: types.CallbackQuery, state: FSMContext):
     seeker_profile = get_seeker_profile(call.from_user.id)
     vsc = seeker_profile.vacancies_search_context
     assert vsc is not None
@@ -258,47 +283,52 @@ async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     desired_salary: (tuple[int, int] | None) = data.get('desired_salary')
     desired_position = data.get('desired_position')
-    if not vsc.jump_prev_vacancy_with_filters(desired_salary, desired_position):
+    if not vsc.jump_vacancy_with_filters(step, desired_salary, desired_position):
         logging.error("Failed to decrement")
 
     vacancy = vsc.get_current_vacancy()
-    await call.message.answer(
-        get_vacancy_message(vacancy), 
-        reply_markup=vsc.inline_markup.get_current_markup())
-    await call.message.delete()
+    await post_vacancy_answer(call.message, vacancy, vsc.inline_markup.get_current_markup())
+
+
+@seeker_router.callback_query(F.data == "prev", MenuStates.seeker_vacancy_search)
+async def on_prev_pressed_search(call: types.CallbackQuery, state: FSMContext):
+    await jump_with_filters(-1, call, state)
+
+
+@seeker_router.callback_query(F.data == "next", MenuStates.seeker_vacancy_search)
+async def on_next_pressed_search(call: types.CallbackQuery, state: FSMContext):
+    await jump_with_filters(1, call, state)
 
 
 @seeker_router.callback_query(F.data == "back", MenuStates.seeker_vacancy_search)
 async def on_back_pressed_search(call: types.CallbackQuery, state: FSMContext):
-    user_id = call.from_user.id
-    user_profile: UserProfile = sweet_home.request_user_profile(user_id)
-    
-    seeker_profile: SeekerProfile = user_profile.seeker_ref
-    assert seeker_profile is not None
-
+    seeker_profile: SeekerProfile = get_seeker_profile(call.from_user.id)
     await call.message.answer("Returning back to seeker home", 
         reply_markup=seeker_profile.seeker_markup.get_current_markup())
     await call.message.delete()
     await state.set_state(MenuStates.seeker_home)
 
 
-@seeker_router.callback_query(F.data == "next", MenuStates.seeker_vacancy_search)
-async def on_next_pressed_search(call: types.CallbackQuery, state: FSMContext):
+@seeker_router.callback_query(F.data == "apply", MenuStates.seeker_vacancy_search)
+async def on_apply_pressed_search(call: types.CallbackQuery, state: FSMContext):
     seeker_profile = get_seeker_profile(call.from_user.id)
     vsc = seeker_profile.vacancies_search_context
-    assert vsc is not None
 
-    data = await state.get_data()
-    desired_salary: (tuple[int, int] | None) = data.get('desired_salary')
-    desired_position = data.get('desired_position')
-    if not vsc.jump_next_vacancy_with_filters(desired_salary, desired_position):
-        logging.error("Failed to decrement")
-
+    markup = vsc.inline_markup.get_current_markup()
     vacancy = vsc.get_current_vacancy()
-    await call.message.answer(
-        get_vacancy_message(vacancy), 
-        reply_markup=vsc.inline_markup.get_current_markup())
-    await call.message.delete()
+    if vacancy is None:
+        logging.error("Internal search context error. Vacancy is none")
+        return
+
+    created = sweet_home.seeker_home.add_applicant(vacancy, seeker_profile)
+    if not created:
+        logging.warn(f"User {seeker_profile} tried to apply for the vacancy {vacancy} he already applied before")
+        await post_vacancy_answer(call.message, vacancy, markup, 
+            prefix="You have already applied to this vacancy. Recruiter will let you know if they deside you are a match!\n\n")
+        return
+
+    await post_vacancy_answer(call.message, vacancy, markup, 
+        prefix="Successfully applied to the vacancy. Recruiter will see you in the list of applicants:\n\n")
 
 
 @seeker_router.callback_query(F.data == "filter_salary", MenuStates.seeker_vacancy_filters)
@@ -367,7 +397,7 @@ async def on_vacancy_filters_back(call: types.CallbackQuery, state: FSMContext):
     if vsc.is_current_vacancy_by_filters(desired_salary, position_regex):
         logging.info("Picked current vacancy as it is filtered already")
         first_vacancy = vsc.get_current_vacancy()
-    elif vsc.jump_next_vacancy_with_filters(desired_salary, desired_position):
+    elif vsc.jump_vacancy_with_filters(1, desired_salary, desired_position):
         logging.info("Jumped from first to filtered")
         first_vacancy = vsc.get_current_vacancy()
 
@@ -379,9 +409,6 @@ async def on_vacancy_filters_back(call: types.CallbackQuery, state: FSMContext):
         await state.set_state(MenuStates.seeker_home)
         return
 
-    await call.message.answer(
-        f"Successfully found vacancies matching specified filters (if any). Here are the vacancies:\n" +
-        get_vacancy_message(first_vacancy),
-        reply_markup=vsc.inline_markup.get_current_markup())
-    await call.message.delete()
+    await post_vacancy_answer(call.message, first_vacancy, vsc.inline_markup.get_current_markup(), 
+        prefix="Successfully found vacancies matching specified filters (if any). Here are the vacancies:\n\n")
     await state.set_state(MenuStates.seeker_vacancy_search)

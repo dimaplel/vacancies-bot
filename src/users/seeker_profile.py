@@ -45,12 +45,13 @@ class VacanciesSearchContext:
         return vacancy.filter_suitable(salary, position_regex, self._mongodb_connection) 
 
 
-    def jump_next_vacancy_with_filters(self, salary, position) -> bool:
-        return self.jump_vacancy_with_filters(1, salary, position)
+    # unused
+    # def jump_next_vacancy_with_filters(self, salary, position) -> bool:
+    #     return self.jump_vacancy_with_filters(1, salary, position)
 
 
-    def jump_prev_vacancy_with_filters(self, salary, position) -> bool:
-        return self.jump_vacancy_with_filters(-1, salary, position)
+    # def jump_prev_vacancy_with_filters(self, salary, position) -> bool:
+    #     return self.jump_vacancy_with_filters(-1, salary, position)
 
 
     def jump_vacancy_with_filters(self, step: int, salary: tuple[int, int], position: str) -> bool:
@@ -272,3 +273,6 @@ class SeekerProfile:
         )
         return self.vacancies_search_context
 
+
+    def get_seeker_node_ref(self) -> str:
+        return self._seeker_node_ref

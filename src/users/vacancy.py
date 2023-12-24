@@ -33,6 +33,25 @@ class Vacancy:
         return [node["user_id_list"] for node in applicants_id_list]
 
 
+    def add_applicant(self, seeker_node_ref: str, neo4j_connection: Neo4jConnection) -> bool:
+        res = neo4j_connection.run_query(
+            """
+            MATCH (s:Seeker), (v:Vacancy)
+            WHERE ID(s) = $seeker_node_ref AND v.vacancy_id = $vacancy_id
+            OPTIONAL MATCH (s)-[r:applied_to]->(v)
+            WITH s, v, r
+            WHERE r IS NULL
+            CREATE (s)-[:applied_to]->(v)
+            return s
+            """,
+            {"vacancy_id": self._vacancy_id, "seeker_node_ref": seeker_node_ref})
+
+        if len(res) == 0:
+            return False
+
+        return True
+
+
     def filter_suitable(self, salary: tuple[int, int], position_regex, mongodb_connection: MongoDBConnection) -> bool:
         data = self.get_vacancy_data(mongodb_connection)
         # Shouldnt happen

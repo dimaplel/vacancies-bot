@@ -37,6 +37,7 @@ class SeekerVacancySearchingInlineKeyboardMarkup(SweetInlineKeyboardMarkup):
         self._toggleable_keyboard_buttons: dict[str, (bool, InlineKeyboardButton)] = {
             "prev_vacancy_button":  (True, InlineKeyboardButton(text="Prev ⬅️", callback_data="prev")),
             "back_button":          (True, InlineKeyboardButton(text="Back ❌", callback_data="back")),
+            "apply_button":         (True, InlineKeyboardButton(text="Apply ✅", callback_data="apply")),
             "next_vacancy_button":  (True, InlineKeyboardButton(text="Next ➡️", callback_data="next")),
         }
         self.update_keyboard()
